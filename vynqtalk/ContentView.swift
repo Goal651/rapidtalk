@@ -10,15 +10,11 @@ import SwiftUI
 struct ContentView: View {
     var body: some View {
         VStack {
-            Image(systemName: "globe")
+            Image(systemName:"bubble")
                 .imageScale(.large)
                 .foregroundStyle(.tint)
-            Text("Hello, world!")
+            Text("Welcome To Vynqtalk Applicatioin")
         }
         .padding()
     }
-}
-
-#Preview {
-    ContentView()
 }
