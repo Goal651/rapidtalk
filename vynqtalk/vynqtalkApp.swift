@@ -10,10 +10,12 @@ import SwiftUI
 @main
 struct vynqtalkApp: App {
     @StateObject var userVM=UserViewModel()
+    @StateObject var authVM=AuthViewModel()
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(userVM)
+                .environmentObject(authVM)
         }
     }
 }

@@ -7,6 +7,7 @@
 import SwiftUI
 
 struct LoginScreen: View {
+    @EnvironmentObject var authVM:AuthViewModel
     @State private var email: String = ""
     @State private var password: String = ""
     
@@ -30,7 +31,6 @@ struct LoginScreen: View {
             .ignoresSafeArea()
             
             VStack(spacing: 30) {
-                BackButton()
                 // Title
                 VStack(spacing: 6) {
                     Text("Welcome Back ")
@@ -95,8 +95,8 @@ struct LoginScreen: View {
                 
                 // Login button
                 Button(action: {
-                    print("Email:", email)
-                    print("Password:", password)
+                    let result:Bool = authVM.login(email: email, password: password)
+                    print("Result from login \(result)")
                 }) {
                     Text("Login")
                         .font(.title3.bold())
