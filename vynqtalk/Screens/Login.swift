@@ -12,6 +12,7 @@ struct LoginScreen: View {
     @State private var email: String = ""
     @State private var password: String = ""
     @State private var showModal: Bool = false
+    @AppStorage("loggedIn") var loggedIn:Bool = false
     
     func isValidEmail(_ email: String) -> Bool {
         let regex = #"^\S+@\S+\.\S+$"#
@@ -36,7 +37,7 @@ struct LoginScreen: View {
             VStack(spacing: 30) {
                 // Title
                 VStack(spacing: 6) {
-                    Text("Welcome Back")
+                    Text("Welcome Back \(loggedIn ? " User" : "Guest" )")
                         .foregroundColor(.white.opacity(0.9))
                         .font(.title3)
                     
