@@ -10,7 +10,7 @@ struct UserComponent : View{
     var user:User
     var body: some View{
         HStack{
-            Text(user.id.uuidString)
+            Text(user.bio!)
             VStack{
                 Text(user.name)
                 Text(user.email)

@@ -11,3 +11,9 @@ struct LoginRequest:Encodable{
     let email:String
     let password:String 
 }
+
+
+struct LoginResponse:Decodable{
+    let user:User
+    let accessToken:String
+}

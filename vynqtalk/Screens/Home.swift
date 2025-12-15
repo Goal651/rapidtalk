@@ -35,35 +35,35 @@ struct HomeScreen: View {
                     .padding(.top, 45)
                 
                 // User list
-                ScrollView {
-                    VStack(spacing: 14) {
-                        ForEach(userVM.users) { user in
-                            HStack(spacing: 15) {
-                                Image(systemName: user.avatar)
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 46, height: 46)
-                                    .foregroundColor(.white)
-                                    .background(
-                                        Circle()
-                                            .fill(Color.white.opacity(0.08))
-                                    )
-                                
-                                Text(user.name)
-                                    .foregroundColor(.white)
-                                    .font(.title3)
-                                
-                                Spacer()
-                            }
-                            .padding()
-                            .background(Color.white.opacity(0.06))
-                            .cornerRadius(14)
-                        }
-                    }
-                    .padding(.horizontal, 25)
-                    .padding(.top, 10)
-                }
-                
+//                ScrollView {
+//                    VStack(spacing: 14) {
+//                        ForEach(userVM.users) { user in
+//                            HStack(spacing: 15) {
+//                                Image(systemName: user.avatar)
+//                                    .resizable()
+//                                    .scaledToFit()
+//                                    .frame(width: 46, height: 46)
+//                                    .foregroundColor(.white)
+//                                    .background(
+//                                        Circle()
+//                                            .fill(Color.white.opacity(0.08))
+//                                    )
+//                                
+//                                Text(user.name)
+//                                    .foregroundColor(.white)
+//                                    .font(.title3)
+//                                
+//                                Spacer()
+//                            }
+//                            .padding()
+//                            .background(Color.white.opacity(0.06))
+//                            .cornerRadius(14)
+//                        }
+//                    }
+//                    .padding(.horizontal, 25)
+//                    .padding(.top, 10)
+//                }
+//                
                 Spacer()
             }
         }
