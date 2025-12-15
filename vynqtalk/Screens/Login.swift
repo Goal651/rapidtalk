@@ -9,6 +9,7 @@ import SwiftUI
 
 struct LoginScreen: View {
     @EnvironmentObject var authVM: AuthViewModel
+    @EnvironmentObject var wsM:WebSocketManager
     @State private var email: String = ""
     @State private var password: String = ""
     @State private var showModal: Bool = false
@@ -100,9 +101,10 @@ struct LoginScreen: View {
                 // Login button
                 Button(action: {
                     Task{
-                        let result: Bool = await authVM.login(email: email, password: password)
+//                        let result: Bool = await authVM.login(email: email, password: password)
+                        wsM.connect(token: "whowhe")
                         withAnimation {
-                            showModal = result
+                            showModal = false
                         }
                     }
                 }) {
@@ -136,7 +138,7 @@ struct LoginScreen: View {
                     description: "You have successfully logged in.",
                     onClose: { withAnimation {
                         showModal = false
-                        HomeScreen()
+                       
                     }  }
                 )
                 .transition(.scale.combined(with: .opacity))

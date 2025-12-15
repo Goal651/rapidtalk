@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		7568F9462EF0945B003F3AF6 /* SwiftStomp in Frameworks */ = {isa = PBXBuildFile; productRef = 7568F9452EF0945B003F3AF6 /* SwiftStomp */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		756A20EF2EE85C4E00A52A61 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7568F9462EF0945B003F3AF6 /* SwiftStomp in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +117,7 @@
 			);
 			name = vynqtalk;
 			packageProductDependencies = (
+				7568F9452EF0945B003F3AF6 /* SwiftStomp */,
 			);
 			productName = vynqtalk;
 			productReference = 756A20DE2EE85C4D00A52A61 /* vynqtalk.app */;
@@ -195,6 +201,9 @@
 			);
 			mainGroup = 756A20D52EE85C4D00A52A61;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				7568F9412EF091F6003F3AF6 /* XCRemoteSwiftPackageReference "SwiftStomp" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 756A20DF2EE85C4D00A52A61 /* Products */;
 			projectDirPath = "";
@@ -560,6 +569,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		7568F9412EF091F6003F3AF6 /* XCRemoteSwiftPackageReference "SwiftStomp" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Romixery/SwiftStomp.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.2.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		7568F9452EF0945B003F3AF6 /* SwiftStomp */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7568F9412EF091F6003F3AF6 /* XCRemoteSwiftPackageReference "SwiftStomp" */;
+			productName = SwiftStomp;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 756A20D62EE85C4D00A52A61 /* Project object */;
 }

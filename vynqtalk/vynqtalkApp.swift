@@ -12,12 +12,15 @@ struct vynqtalkApp: App {
     @StateObject var userVM=UserViewModel()
     @StateObject var authVM=AuthViewModel()
     @StateObject var messageVM=MessageViewModel()
+    @StateObject var wsM=WebSocketManager()
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(userVM)
                 .environmentObject(authVM)
                 .environmentObject(messageVM)
+                .environmentObject(wsM)
+                
         }
     }
 }
