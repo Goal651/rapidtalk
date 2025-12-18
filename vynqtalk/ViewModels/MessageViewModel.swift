@@ -18,27 +18,41 @@ final class MessageViewModel: ObservableObject {
     }
     
     // Add new message
-    func sendMessage(_ text: String, isMe: Bool = true) {
-        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        
-        let time = formattedTime()
-        let message = Message(text: text, isMe: isMe, time: time)
-        
+    func sendMessage(_ content: String) {
+        guard !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+
+        // Placeholder for current user
+        let currentUser = User(id: 1, name: "Me", avatar: "", password: "", email: "me@example.com", userRole: .user, status: "online", bio: "", lastActive: Date(), createdAt: Date(), latestMessage: nil, unreadMessages: [], online: true)
+
+        let message = Message(id: Int.random(in: 1000...9999),
+                              content: content,
+                              type: .text,
+                              sender: currentUser,
+                              receiver: nil, // This would be set to another user in a real chat
+                              timestamp: Date(),
+                              fileName: "",
+                              edited: false,
+                              reactions: [],
+                              replyTo: nil)
+
         messages.append(message)
     }
-    
+
     // Return messages
     func getMessages() -> [Message] {
         messages
     }
-    
+
     // Mock data
     private func loadMockMessages() {
+        let user1 = User(id: 1, name: "Me", avatar: "", password: "", email: "me@example.com", userRole: .user, status: "online", bio: "", lastActive: Date(), createdAt: Date(), latestMessage: nil, unreadMessages: [], online: true)
+        let user2 = User(id: 2, name: "Friend", avatar: "", password: "", email: "friend@example.com", userRole: .user, status: "online", bio: "", lastActive: Date(), createdAt: Date(), latestMessage: nil, unreadMessages: [], online: true)
+
         messages = [
-            Message(text: "Hey 👋", isMe: false, time: "09:41"),
-            Message(text: "Hi! How are you?", isMe: true, time: "09:42"),
-            Message(text: "I'm building Vynqtalk 😄", isMe: false, time: "09:43"),
-            Message(text: "Nice, looks clean.", isMe: true, time: "09:44")
+            Message(id: 1, content: "Hey 👋", type: .text, sender: user2, receiver: user1, timestamp: Date().addingTimeInterval(-300), fileName: "", edited: false, reactions: [], replyTo: nil),
+            Message(id: 2, content: "Hi! How are you?", type: .text, sender: user1, receiver: user2, timestamp: Date().addingTimeInterval(-240), fileName: "", edited: false, reactions: [], replyTo: nil),
+            Message(id: 3, content: "I'm building Vynqtalk 😄", type: .text, sender: user2, receiver: user1, timestamp: Date().addingTimeInterval(-180), fileName: "", edited: false, reactions: [], replyTo: nil),
+            Message(id: 4, content: "Nice, looks clean.", type: .text, sender: user1, receiver: user2, timestamp: Date().addingTimeInterval(-120), fileName: "", edited: false, reactions: [], replyTo: nil)
         ]
     }
     

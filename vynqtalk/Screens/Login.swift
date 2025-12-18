@@ -102,7 +102,7 @@ struct LoginScreen: View {
                 // Login button
                 Button(action: {
                     Task{
-//                        let result: Bool = await authVM.login(email: email, password: password)
+                        await authVM.login(email: email, password: password)
                         wsM.connect(token: authToken)
                         withAnimation {
                             showModal = false

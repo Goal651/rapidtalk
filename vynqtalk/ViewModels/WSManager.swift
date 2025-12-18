@@ -19,7 +19,7 @@ class WebSocketManager: ObservableObject, SwiftStompDelegate {
 
     // Connect to the STOMP WebSocket
     func connect(token: String) {
-        guard let url = URL(string: "ws://10.12.74.234:8080/api/v2/ws?token=\(token)") else {
+        guard let url = URL(string: "ws://10.12.73.3:8080/api/v2/ws?token=\(token)") else {
             lastError = "Invalid WebSocket URL"
             print(lastError!)
             return

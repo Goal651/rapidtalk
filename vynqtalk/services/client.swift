@@ -21,7 +21,7 @@ final class APIClient: ObservableObject {
     
     static let shared = APIClient()
     
-    private let baseURL = "http://10.12.74.234:8080/api/v2"
+    private let baseURL = "http://10.12.73.3:8080/api/v2"
     private var logoutListeners: [() -> Void] = []
     
     private init() {}
