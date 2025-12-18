@@ -10,6 +10,7 @@ import SwiftUI
 struct ChatScreen: View {
     @EnvironmentObject var messageVM: MessageViewModel
     @State private var messageText: String = ""
+    let userId: Int
     
     var body: some View {
         ZStack {
@@ -34,7 +35,7 @@ struct ChatScreen: View {
                         .foregroundColor(.white.opacity(0.9))
                     
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Alex")
+                        Text("User \(userId)")
                             .foregroundColor(.white)
                             .font(.headline)
                         
@@ -83,5 +84,10 @@ struct ChatScreen: View {
             }
         }
         .navigationBarBackButtonHidden()
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                BackButton()
+            }
+        }
     }
 }

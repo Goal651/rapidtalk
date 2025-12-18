@@ -10,9 +10,14 @@ import SwiftUI
 
 class AuthViewModel:ObservableObject{
     let api=APIClient.shared
+    private let nav: NavigationCoordinator
     
     @AppStorage("loggedIn") var loggedIn: Bool = false
     @AppStorage("token") var authToken:String = " "
+
+    init(nav: NavigationCoordinator) {
+        self.nav = nav
+    }
     
     @MainActor
     func login(email: String, password: String) async -> Bool {
@@ -32,6 +37,7 @@ class AuthViewModel:ObservableObject{
             APIClient.shared.loggedIn = true
             authToken=loginData.accessToken
 
+            nav.reset(to: .home)
             return true
 
         } catch {

@@ -13,8 +13,9 @@ struct LoginScreen: View {
     @State private var email: String = ""
     @State private var password: String = ""
     @State private var showModal: Bool = false
+    @State private var modalTitle: String = ""
+    @State private var modalDescription: String = ""
     @AppStorage("loggedIn") var loggedIn: Bool = false
-    @AppStorage("token") var authToken:String = " "
     
     func isValidEmail(_ email: String) -> Bool {
         let regex = #"^\S+@\S+\.\S+$"#
@@ -102,10 +103,13 @@ struct LoginScreen: View {
                 // Login button
                 Button(action: {
                     Task{
-                        await authVM.login(email: email, password: password)
-                        wsM.connect(token: authToken)
-                        withAnimation {
-                            showModal = false
+                        let ok = await authVM.login(email: email, password: password)
+                        if ok {
+                            wsM.connect(token: authVM.authToken.trimmingCharacters(in: .whitespacesAndNewlines))
+                        } else {
+                            modalTitle = "Login Failed"
+                            modalDescription = "Please check your email/password and try again."
+                            withAnimation { showModal = true }
                         }
                     }
                 }) {
@@ -135,11 +139,10 @@ struct LoginScreen: View {
             // Modal overlay
             if showModal {
                 ModalView(
-                    title: "Success!",
-                    description: "You have successfully logged in.",
+                    title: modalTitle,
+                    description: modalDescription,
                     onClose: { withAnimation {
                         showModal = false
-                       
                     }  }
                 )
                 .transition(.scale.combined(with: .opacity))

@@ -9,6 +9,7 @@ import SwiftUI
 
 struct RegisterScreen: View {
     @EnvironmentObject var authVM: AuthViewModel
+    @EnvironmentObject var nav: NavigationCoordinator
     
     @State private var name: String = ""
     @State private var email: String = ""
@@ -179,7 +180,7 @@ struct RegisterScreen: View {
                     description: "Welcome to Vynqtalk 🎉",
                     onClose: { withAnimation {
                         showModal = false
-                        HomeScreen()
+                        nav.reset(to: .home)
                     } }
                 )
                 .transition(.scale.combined(with: .opacity))

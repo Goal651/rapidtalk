@@ -23,6 +23,53 @@ final class APIClient: ObservableObject {
     
     private let baseURL = "http://10.12.73.3:8080/api/v2"
     private var logoutListeners: [() -> Void] = []
+
+    private static let jsonDecoder: JSONDecoder = {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+
+            // 1) ISO-8601 string dates (common for Java Instant)
+            if let str = try? container.decode(String.self) {
+                let f1 = ISO8601DateFormatter()
+                f1.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                let f2 = ISO8601DateFormatter()
+                f2.formatOptions = [.withInternetDateTime]
+
+                if let date = f1.date(from: str) ?? f2.date(from: str) {
+                    return date
+                }
+
+                throw DecodingError.dataCorruptedError(
+                    in: container,
+                    debugDescription: "Invalid date string: \(str)"
+                )
+            }
+
+            // 2) Numeric epoch dates (seconds or milliseconds)
+            if let num = try? container.decode(Double.self) {
+                let seconds: TimeInterval = num > 100_000_000_000 ? (num / 1000.0) : num
+                return Date(timeIntervalSince1970: seconds)
+            }
+
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Unsupported date value"
+            )
+        }
+        return decoder
+    }()
+
+    private static let jsonEncoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .custom { date, encoder in
+            var container = encoder.singleValueContainer()
+            let f = ISO8601DateFormatter()
+            f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            try container.encode(f.string(from: date))
+        }
+        return encoder
+    }()
     
     private init() {}
     
@@ -96,7 +143,7 @@ final class APIClient: ObservableObject {
             throw URLError(.badServerResponse)
         }
         
-        let decoded = try JSONDecoder().decode(T.self, from: data)
+        let decoded = try Self.jsonDecoder.decode(T.self, from: data)
         return decoded
     }
     
@@ -106,17 +153,17 @@ final class APIClient: ObservableObject {
     }
     
     func post<T: Decodable>(_ endpoint: String, data: Encodable) async throws -> APIResponse<T> {
-        let body = try JSONEncoder().encode(data)
+        let body = try Self.jsonEncoder.encode(AnyEncodable(data))
         return try await makeRequest(endpoint, method: "POST", body: body)
     }
     
     func put<T: Decodable>(_ endpoint: String, data: Encodable) async throws -> APIResponse<T> {
-        let body = try JSONEncoder().encode(data)
+        let body = try Self.jsonEncoder.encode(AnyEncodable(data))
         return try await makeRequest(endpoint, method: "PUT", body: body)
     }
     
     func patch<T: Decodable>(_ endpoint: String, data: Encodable) async throws -> APIResponse<T> {
-        let body = try JSONEncoder().encode(data)
+        let body = try Self.jsonEncoder.encode(AnyEncodable(data))
         return try await makeRequest(endpoint, method: "PATCH", body: body)
     }
     
@@ -159,7 +206,7 @@ final class APIClient: ObservableObject {
             throw URLError(.userAuthenticationRequired)
         }
         
-        let decoded = try JSONDecoder().decode(APIResponse<T>.self, from: responseData)
+        let decoded = try Self.jsonDecoder.decode(APIResponse<T>.self, from: responseData)
         return decoded
     }
     
@@ -168,5 +215,18 @@ final class APIClient: ObservableObject {
         if path.hasSuffix(".jpg") || path.hasSuffix(".jpeg") { return "image/jpeg" }
         if path.hasSuffix(".gif") { return "image/gif" }
         return "application/octet-stream"
+    }
+}
+
+// MARK: - Encode any Encodable (type-erasure)
+private struct AnyEncodable: Encodable {
+    private let encodeImpl: (Encoder) throws -> Void
+
+    init(_ value: Encodable) {
+        self.encodeImpl = value.encode(to:)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        try encodeImpl(encoder)
     }
 }

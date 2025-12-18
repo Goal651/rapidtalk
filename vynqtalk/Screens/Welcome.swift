@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct WelcomeScreen: View {
+    @EnvironmentObject var nav: NavigationCoordinator
     @State private var wave = false
     
     var body: some View {
@@ -49,7 +50,9 @@ struct WelcomeScreen: View {
                 
                 
                 // Login button
-                NavigationLink(destination: LoginScreen()) {
+                Button {
+                    nav.push(.login)
+                } label: {
                     Text("Login")
                         .font(.title3.bold())
                         .foregroundColor(.black)
@@ -74,7 +77,9 @@ struct WelcomeScreen: View {
                 
                 
                 // Register button
-                NavigationLink(destination: HomeScreen()) {
+                Button {
+                    nav.push(.register)
+                } label: {
                     Text("Register")
                         .font(.title3.bold())
                         .foregroundColor(.white)
