@@ -14,9 +14,9 @@ struct AppTheme {
     
     /// Primary gradient colors for backgrounds
     struct GradientColors {
-        static let deepBlack = Color(red: 0.03, green: 0.04, blue: 0.08)      // #080A14
-        static let richBlack = Color(red: 0.06, green: 0.08, blue: 0.12)      // #0F141F
-        static let darkGray = Color(red: 0.10, green: 0.12, blue: 0.16)       // #1A1F29
+        static let deepBlack = Color.black                                     // Pure Black
+        static let richBlack = Color.black                                     // Pure Black
+        static let darkGray = Color(red: 0.05, green: 0.05, blue: 0.05)       // Very dark gray
         
         // Legacy names for compatibility
         static let deepPurple = deepBlack
@@ -30,8 +30,8 @@ struct AppTheme {
     /// Primary gradient configuration
     static let primaryGradient = LinearGradient(
         colors: [
-            GradientColors.deepBlack,
-            GradientColors.richBlack,
+            Color.black,
+            Color.black,
             GradientColors.darkGray
         ],
         startPoint: .topLeading,
@@ -70,8 +70,8 @@ struct AppTheme {
         static let sentStart = Color(red: 0.20, green: 0.60, blue: 1.0)        // #3399FF
         static let sentEnd = Color(red: 0.15, green: 0.50, blue: 0.90)         // #2680E6
         
-        // Received messages - Dark elevated surface
-        static let received = Color(red: 0.10, green: 0.12, blue: 0.16)        // #1A1F29
+        // Received messages - Pure black with slight gray tint
+        static let received = Color(red: 0.05, green: 0.05, blue: 0.05)        // Very dark gray
     }
     
     // MARK: - Typography

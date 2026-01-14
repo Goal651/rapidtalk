@@ -7,7 +7,6 @@
 
 import SwiftUI
 
-
 enum UserFilterType: String, CaseIterable {
     case all = "All"
     case online = "Online"
@@ -24,6 +23,8 @@ struct HomeScreen: View {
     @State private var searchText: String = ""
     @State private var selectedFilter: UserFilterType = .all
     @State private var tappedUserId: String? = nil
+    @State private var appeared = false
+    @State private var showNewChatSheet = false
     
     var filteredUsers: [User] {
         var users = userVM.users
@@ -57,140 +58,183 @@ struct HomeScreen: View {
     }
     
     var body: some View {
-        GeometryReader { geometry in
-            homeContent(geometry: geometry)
+        ZStack {
+            // Deep black background like onboarding
+            AppTheme.GradientColors.deepBlack
+                .ignoresSafeArea()
+            
+            VStack(spacing: 0) {
+                // Header
+                headerSection
+                
+                // Search and filters
+                searchAndFiltersSection
+                
+                // Chat list
+                chatListSection
+            }
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 20)
+            
+            // Floating New Chat Button
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    FloatingActionButton(
+                        icon: "plus.message.fill",
+                        action: { showNewChatSheet = true }
+                    )
+                    .padding(.trailing, 24)
+                    .padding(.bottom, 100) // Above tab bar
+                }
+            }
         }
-        .ignoresSafeArea(edges: .bottom)
         .navigationBarBackButtonHidden()
+        .onAppear {
+            withAnimation(.spring(response: 0.8, dampingFraction: 0.7)) {
+                appeared = true
+            }
+        }
         .task {
+            await userVM.loadUsers()
+        }
+        .sheet(isPresented: $showNewChatSheet) {
+            NewChatSheet()
+        }
+        .refreshable {
             await userVM.loadUsers()
         }
     }
     
-    // MARK: - View Builders
+    // MARK: - Header Section
     
     @ViewBuilder
-    private func homeContent(geometry: GeometryProxy) -> some View {
-        let spacing = ResponsiveSpacing(screenWidth: geometry.size.width)
-        let isLandscape = geometry.size.width > geometry.size.height
-        
-        ZStack {
-            AnimatedGradientBackground()
-                .ignoresSafeArea()
-            
-            VStack(alignment: .leading, spacing: 0) {
-                headerSection(spacing: spacing, isLandscape: isLandscape)
-                filterSection(spacing: spacing)
-                chatListSection(spacing: spacing, isLandscape: isLandscape)
-                Spacer(minLength: 0)
+    private var headerSection: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Messages")
+                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+                
+                Text("Stay connected with friends")
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .foregroundColor(.white.opacity(0.7))
             }
-            .frame(maxWidth: spacing.contentMaxWidth)
-            .frame(width: geometry.size.width)
-        }
-    }
-    
-    @ViewBuilder
-    private func headerSection(spacing: ResponsiveSpacing, isLandscape: Bool) -> some View {
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.m) {
-            // Title
-            Text("Chats")
-                .font(isLandscape ? AppTheme.Typography.title : AppTheme.Typography.largeTitle)
-                .foregroundColor(AppTheme.TextColors.primary)
-                .padding(.horizontal, spacing.horizontalPadding)
-                .padding(.top, isLandscape ? AppTheme.Spacing.m : spacing.topPadding)
             
-            // Search Bar
-            searchBar(spacing: spacing)
-        }
-        .padding(.bottom, AppTheme.Spacing.m)
-    }
-    
-    @ViewBuilder
-    private func searchBar(spacing: ResponsiveSpacing) -> some View {
-        HStack(spacing: AppTheme.Spacing.s) {
-            Image(systemName: "magnifyingglass")
-                .foregroundColor(AppTheme.TextColors.tertiary)
-                .font(.system(size: AppTheme.FontSizes.body))
+            Spacer()
             
-            TextField("Search chats...", text: $searchText)
-                .font(AppTheme.Typography.body)
-                .foregroundColor(AppTheme.TextColors.primary)
-                .accentColor(AppTheme.AccentColors.primary)
-            
-            if !searchText.isEmpty {
-                Button(action: {
-                    searchText = ""
-                }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(AppTheme.TextColors.tertiary)
-                        .font(.system(size: AppTheme.FontSizes.body))
-                }
+            // Profile button
+            Button(action: {}) {
+                Circle()
+                    .fill(.white.opacity(0.1))
+                    .frame(width: 44, height: 44)
+                    .overlay(
+                        Image(systemName: "person.crop.circle.fill")
+                            .font(.system(size: 24, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.8))
+                    )
+                    .overlay(
+                        Circle()
+                            .stroke(.white.opacity(0.2), lineWidth: 1)
+                    )
             }
         }
-        .padding(.horizontal, AppTheme.Spacing.m)
-        .padding(.vertical, AppTheme.Spacing.m)
-        .background(AppTheme.SurfaceColors.surfaceLight)
-        .cornerRadius(AppTheme.CornerRadius.m)
-        .padding(.horizontal, spacing.horizontalPadding)
+        .padding(.horizontal, 24)
+        .padding(.top, 16)
+        .padding(.bottom, 24)
     }
     
+    // MARK: - Search and Filters Section
+    
     @ViewBuilder
-    private func filterSection(spacing: ResponsiveSpacing) -> some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: AppTheme.Spacing.s) {
-                ForEach(UserFilterType.allCases, id: \.id) { filter in
-                    FilterChip(
-                        title: filter.rawValue,
-                        isSelected: selectedFilter == filter,
-                        action: {
-                            withAnimation(AppTheme.AnimationCurves.buttonPress) {
+    private var searchAndFiltersSection: some View {
+        VStack(spacing: 20) {
+            // Modern Search Bar
+            ModernSearchBar(text: $searchText)
+                .padding(.horizontal, 24)
+            
+            // Filter Chips
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(UserFilterType.allCases, id: \.id) { filter in
+                        ModernFilterChip(
+                            title: filter.rawValue,
+                            isSelected: selectedFilter == filter,
+                            count: getFilterCount(filter)
+                        ) {
+                            let generator = UIImpactFeedbackGenerator(style: .light)
+                            generator.impactOccurred()
+                            
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                                 selectedFilter = filter
                             }
                         }
-                    )
+                    }
                 }
+                .padding(.horizontal, 24)
             }
-            .padding(.horizontal, spacing.horizontalPadding)
         }
-        .padding(.bottom, AppTheme.Spacing.m)
+        .padding(.bottom, 24)
     }
     
+    // MARK: - Chat List Section
+    
     @ViewBuilder
-    private func chatListSection(spacing: ResponsiveSpacing, isLandscape: Bool) -> some View {
+    private var chatListSection: some View {
         ScrollView {
-            VStack(spacing: AppTheme.Spacing.xs) {
+            LazyVStack(spacing: 12) {
                 if userVM.isLoading {
-                    LoadingView(message: "Loading chats...", style: .spinner)
-                        .padding(.top, AppTheme.Spacing.xl)
+                    ModernLoadingView()
+                        .padding(.top, 40)
                 } else if let err = userVM.errorMessage {
-                    Text(err)
-                        .font(AppTheme.Typography.body)
-                        .foregroundColor(AppTheme.AccentColors.error)
-                        .padding(.top, AppTheme.Spacing.xl)
+                    ModernErrorView(message: err)
+                        .padding(.top, 40)
                 } else if filteredUsers.isEmpty {
-                    EmptyStateView(filterType: selectedFilter)
+                    ModernEmptyStateView(filterType: selectedFilter)
+                        .padding(.top, 40)
                 } else {
-                    chatListItems(isLandscape: isLandscape)
+                    ForEach(Array(filteredUsers.enumerated()), id: \.element.id) { index, user in
+                        ModernChatListItem(
+                            user: user,
+                            isPressed: tappedUserId == user.id
+                        ) {
+                            handleChatTap(user: user)
+                        }
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .trailing).combined(with: .opacity),
+                            removal: .move(edge: .leading).combined(with: .opacity)
+                        ))
+                        .animation(.spring(response: 0.5, dampingFraction: 0.8).delay(Double(index) * 0.05), value: appeared)
+                    }
                 }
             }
-            .padding(.horizontal, spacing.horizontalPadding)
-            .padding(.top, AppTheme.Spacing.xs)
-            .padding(.bottom, spacing.bottomPadding)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 120) // Space for tab bar and floating button
         }
     }
     
-    @ViewBuilder
-    private func chatListItems(isLandscape: Bool) -> some View {
-        ForEach(filteredUsers) { user in
-            ChatListItem(user: user, isPressed: tappedUserId == user.id, isCompact: isLandscape)
-                .onTapGesture {
-                    handleChatTap(user: user)
-                }
+    // MARK: - Helper Methods
+    
+    private func getFilterCount(_ filter: UserFilterType) -> Int {
+        switch filter {
+        case .all:
+            return userVM.users.count
+        case .online:
+            return userVM.users.filter { $0.online == true }.count
+        case .offline:
+            return userVM.users.filter { $0.online != true }.count
+        case .recent:
+            return userVM.users.filter { $0.lastActive != nil }.count
         }
     }
     
     private func handleChatTap(user: User) {
         guard let id = user.id else { return }
+        
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
+        
         tappedUserId = id
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -200,68 +244,204 @@ struct HomeScreen: View {
     }
 }
 
-// MARK: - Chat List Item Component
+// MARK: - Modern Search Bar
 
-struct ChatListItem: View {
-    let user: User
-    var isPressed: Bool = false
-    var isCompact: Bool = false
+struct ModernSearchBar: View {
+    @Binding var text: String
+    @FocusState private var isFocused: Bool
+    @State private var appeared = false
     
     var body: some View {
-        HStack(spacing: AppTheme.Spacing.s) {
-            // Avatar with online indicator
-            ZStack(alignment: .bottomTrailing) {
-                avatar
-                
-                // Online indicator
-                if user.online == true {
-                    Circle()
-                        .fill(AppTheme.AccentColors.online)
-                        .frame(width: 10, height: 10)
-                        .overlay(
-                            Circle()
-                                .stroke(AppTheme.GradientColors.deepBlack, lineWidth: 2)
-                        )
-                        .offset(x: 1, y: 1)
-                }
-            }
+        HStack(spacing: 16) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundColor(isFocused ? AppTheme.AccentColors.primary : .white.opacity(0.5))
             
-            // User info
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
-                HStack {
-                    Text(user.name ?? "Unknown User")
-                        .font(isCompact ? AppTheme.Typography.subheadline : AppTheme.Typography.headline)
-                        .foregroundColor(AppTheme.TextColors.primary)
-                    
-                    Spacer()
-                    
-                    // Timestamp placeholder (would come from last message)
-                    Text("Now")
-                        .font(AppTheme.Typography.caption)
-                        .foregroundColor(AppTheme.TextColors.tertiary)
+            TextField("Search conversations...", text: $text)
+                .font(.system(size: 16, weight: .medium, design: .rounded))
+                .foregroundColor(.white)
+                .focused($isFocused)
+                .submitLabel(.search)
+            
+            if !text.isEmpty {
+                Button(action: {
+                    text = ""
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundColor(.white.opacity(0.5))
                 }
-                
-                HStack {
-                    // Last message preview (using bio as placeholder)
-                    Text(user.bio ?? user.email ?? "Start a conversation")
-                        .font(AppTheme.Typography.caption)
-                        .foregroundColor(AppTheme.TextColors.secondary)
-                        .lineLimit(1)
-                    
-                    Spacer()
-                    
-                    // Unread badge placeholder
-                    // This would be populated from actual message data
-                    // UnreadBadge(count: 3)
-                }
+                .transition(.scale.combined(with: .opacity))
             }
         }
-        .padding(.horizontal, AppTheme.Spacing.s)
-        .padding(.vertical, AppTheme.Spacing.s)
-        .background(AppTheme.SurfaceColors.surfaceLight)
-        .cornerRadius(AppTheme.CornerRadius.m)
-        .scaleEffect(isPressed ? 0.98 : 1.0)
-        .animation(AppTheme.AnimationCurves.buttonPress, value: isPressed)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(.white.opacity(isFocused ? 0.12 : 0.08))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(
+                            isFocused ? AppTheme.AccentColors.primary.opacity(0.6) : .white.opacity(0.2),
+                            lineWidth: isFocused ? 2 : 1
+                        )
+                )
+        )
+        .scaleEffect(isFocused ? 1.02 : 1.0)
+        .shadow(
+            color: isFocused ? AppTheme.AccentColors.primary.opacity(0.2) : .clear,
+            radius: isFocused ? 12 : 0,
+            y: isFocused ? 4 : 0
+        )
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 20)
+        .onAppear {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.1)) {
+                appeared = true
+            }
+        }
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isFocused)
+    }
+}
+
+// MARK: - Modern Filter Chip
+
+struct ModernFilterChip: View {
+    let title: String
+    let isSelected: Bool
+    let count: Int
+    let action: () -> Void
+    @State private var appeared = false
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Text(title)
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                
+                if count > 0 {
+                    Text("\(count)")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundColor(isSelected ? AppTheme.GradientColors.deepBlack : AppTheme.AccentColors.primary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            Capsule()
+                                .fill(isSelected ? .white.opacity(0.9) : AppTheme.AccentColors.primary.opacity(0.2))
+                        )
+                }
+            }
+            .foregroundColor(isSelected ? AppTheme.GradientColors.deepBlack : .white.opacity(0.8))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(
+                Capsule()
+                    .fill(isSelected ? .white : .white.opacity(0.1))
+                    .overlay(
+                        Capsule()
+                            .stroke(.white.opacity(isSelected ? 0 : 0.2), lineWidth: 1)
+                    )
+            )
+            .shadow(
+                color: isSelected ? .white.opacity(0.3) : .clear,
+                radius: isSelected ? 8 : 0,
+                y: isSelected ? 4 : 0
+            )
+        }
+        .scaleEffect(appeared ? 1 : 0.8)
+        .opacity(appeared ? 1 : 0)
+        .onAppear {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.2)) {
+                appeared = true
+            }
+        }
+    }
+}
+
+// MARK: - Modern Chat List Item
+
+struct ModernChatListItem: View {
+    let user: User
+    var isPressed: Bool = false
+    let action: () -> Void
+    @State private var appeared = false
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 16) {
+                // Avatar with online indicator
+                ZStack(alignment: .bottomTrailing) {
+                    avatar
+                        .frame(width: 56, height: 56)
+                    
+                    // Online indicator
+                    if user.online == true {
+                        Circle()
+                            .fill(AppTheme.AccentColors.online)
+                            .frame(width: 16, height: 16)
+                            .overlay(
+                                Circle()
+                                    .stroke(AppTheme.GradientColors.deepBlack, lineWidth: 3)
+                            )
+                            .offset(x: 2, y: 2)
+                    }
+                }
+                
+                // User info
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text(user.name ?? "Unknown User")
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .foregroundColor(.white)
+                        
+                        Spacer()
+                        
+                        Text("2m")
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                            .foregroundColor(.white.opacity(0.5))
+                    }
+                    
+                    HStack {
+                        Text(user.bio ?? user.email ?? "Start a conversation")
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                            .foregroundColor(.white.opacity(0.7))
+                            .lineLimit(1)
+                        
+                        Spacer()
+                        
+                        // Unread badge (placeholder)
+                        if Int.random(in: 0...10) > 7 {
+                            Circle()
+                                .fill(AppTheme.AccentColors.primary)
+                                .frame(width: 8, height: 8)
+                        }
+                    }
+                }
+            }
+            .padding(20)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(.white.opacity(isPressed ? 0.15 : 0.08))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(.white.opacity(0.1), lineWidth: 1)
+                    )
+            )
+            .scaleEffect(isPressed ? 0.96 : 1.0)
+            .shadow(
+                color: .black.opacity(0.1),
+                radius: 8,
+                y: 4
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+        .opacity(appeared ? 1 : 0)
+        .offset(x: appeared ? 0 : 50)
+        .onAppear {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                appeared = true
+            }
+        }
     }
     
     @ViewBuilder
@@ -273,142 +453,233 @@ struct ChatListItem: View {
                 switch phase {
                 case .empty:
                     ProgressView()
-                        .frame(width: 48, height: 48)
+                        .frame(width: 56, height: 56)
                 case .success(let image):
                     image
                         .resizable()
                         .scaledToFill()
-                        .frame(width: 48, height: 48)
+                        .frame(width: 56, height: 56)
                         .clipShape(Circle())
                 case .failure:
-                    Image(systemName: "person.circle.fill")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 48, height: 48)
-                        .foregroundColor(AppTheme.TextColors.secondary)
+                    defaultAvatar
                 @unknown default:
-                    EmptyView()
+                    defaultAvatar
                 }
             }
             .overlay(
                 Circle()
-                    .stroke(AppTheme.TextColors.tertiary, lineWidth: 1.5)
+                    .stroke(.white.opacity(0.2), lineWidth: 2)
             )
         } else {
-            Image(systemName: "person.circle.fill")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 48, height: 48)
-                .foregroundColor(AppTheme.TextColors.secondary)
-                .overlay(
-                    Circle()
-                        .stroke(AppTheme.TextColors.tertiary, lineWidth: 1.5)
-                )
+            defaultAvatar
         }
+    }
+    
+    private var defaultAvatar: some View {
+        Circle()
+            .fill(
+                LinearGradient(
+                    colors: [
+                        AppTheme.AccentColors.primary.opacity(0.3),
+                        AppTheme.AccentColors.secondary.opacity(0.3)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .overlay(
+                Image(systemName: "person.fill")
+                    .font(.system(size: 24, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.8))
+            )
+            .overlay(
+                Circle()
+                    .stroke(.white.opacity(0.2), lineWidth: 2)
+            )
     }
 }
 
-// MARK: - Filter Chip Component
+// MARK: - Supporting Views
 
-struct FilterChip: View {
-    let title: String
-    let isSelected: Bool
-    let action: () -> Void
+struct ModernLoadingView: View {
+    @State private var appeared = false
     
     var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(AppTheme.Typography.subheadline)
-                .foregroundColor(isSelected ? AppTheme.TextColors.primary : AppTheme.TextColors.secondary)
-                .padding(.horizontal, AppTheme.Spacing.m)
-                .padding(.vertical, AppTheme.Spacing.s)
-                .background(
-                    isSelected ? AppTheme.AccentColors.primary : AppTheme.SurfaceColors.surfaceLight
-                )
-                .cornerRadius(AppTheme.CornerRadius.m)
-        }
-    }
-}
-
-// MARK: - Empty State View
-
-struct EmptyStateView: View {
-    let filterType: UserFilterType
-    @State private var appeared: Bool = false
-    
-    private var message: String {
-        switch filterType {
-        case .all:
-            return "No conversations yet"
-        case .online:
-            return "No users online"
-        case .offline:
-            return "No offline users"
-        case .recent:
-            return "No recent activity"
-        }
-    }
-    
-    private var subtitle: String {
-        switch filterType {
-        case .all:
-            return "Start chatting with someone!"
-        default:
-            return "Try adjusting your filters"
-        }
-    }
-    
-    var body: some View {
-        VStack(spacing: AppTheme.Spacing.l) {
-            Image(systemName: "bubble.left.and.bubble.right")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 80, height: 80)
-                .foregroundColor(AppTheme.TextColors.tertiary)
+        VStack(spacing: 20) {
+            ProgressView()
+                .progressViewStyle(CircularProgressViewStyle(tint: AppTheme.AccentColors.primary))
+                .scaleEffect(1.2)
             
-            VStack(spacing: AppTheme.Spacing.s) {
-                Text(message)
-                    .font(AppTheme.Typography.title3)
-                    .foregroundColor(AppTheme.TextColors.primary)
-                
-                Text(subtitle)
-                    .font(AppTheme.Typography.body)
-                    .foregroundColor(AppTheme.TextColors.secondary)
-            }
+            Text("Loading conversations...")
+                .font(.system(size: 16, weight: .medium, design: .rounded))
+                .foregroundColor(.white.opacity(0.7))
         }
-        .padding(.top, AppTheme.Spacing.xxl)
         .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 20)
         .onAppear {
-            withAnimation(AppTheme.AnimationCurves.componentAppearance.delay(0.2)) {
+            withAnimation(.easeOut(duration: 0.5)) {
                 appeared = true
             }
         }
     }
 }
 
-// MARK: - Unread Badge Component
-
-struct UnreadBadge: View {
-    let count: Int
-    @State private var appeared: Bool = false
+struct ModernErrorView: View {
+    let message: String
     
     var body: some View {
-        if count > 0 {
-            Text("\(count)")
-                .font(AppTheme.Typography.caption)
-                .foregroundColor(AppTheme.TextColors.primary)
-                .padding(.horizontal, count > 9 ? AppTheme.Spacing.s : AppTheme.Spacing.xs)
-                .padding(.vertical, AppTheme.Spacing.xs)
-                .background(AppTheme.AccentColors.primary)
-                .clipShape(Capsule())
-                .frame(minWidth: 20, minHeight: 20)
-                .scaleEffect(appeared ? 1 : 0)
-                .onAppear {
-                    withAnimation(AppTheme.AnimationCurves.spring) {
-                        appeared = true
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 40, weight: .semibold))
+                .foregroundColor(AppTheme.AccentColors.error)
+            
+            Text("Something went wrong")
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundColor(.white)
+            
+            Text(message)
+                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .foregroundColor(.white.opacity(0.7))
+                .multilineTextAlignment(.center)
+        }
+    }
+}
+
+struct ModernEmptyStateView: View {
+    let filterType: UserFilterType
+    @State private var appeared = false
+    
+    private var message: String {
+        switch filterType {
+        case .all: return "No conversations yet"
+        case .online: return "No users online"
+        case .offline: return "No offline users"
+        case .recent: return "No recent activity"
+        }
+    }
+    
+    private var subtitle: String {
+        switch filterType {
+        case .all: return "Start chatting with someone!"
+        default: return "Try adjusting your filters"
+        }
+    }
+    
+    var body: some View {
+        VStack(spacing: 24) {
+            Image(systemName: "bubble.left.and.bubble.right.fill")
+                .font(.system(size: 60, weight: .semibold))
+                .foregroundColor(.white.opacity(0.3))
+            
+            VStack(spacing: 8) {
+                Text(message)
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+                
+                Text(subtitle)
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .foregroundColor(.white.opacity(0.7))
+            }
+        }
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 30)
+        .onAppear {
+            withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.2)) {
+                appeared = true
+            }
+        }
+    }
+}
+
+// MARK: - Floating Action Button
+
+struct FloatingActionButton: View {
+    let icon: String
+    let action: () -> Void
+    @State private var appeared = false
+    @State private var isPressed = false
+    
+    var body: some View {
+        Button(action: {
+            let generator = UIImpactFeedbackGenerator(style: .medium)
+            generator.impactOccurred()
+            action()
+        }) {
+            Image(systemName: icon)
+                .font(.system(size: 24, weight: .semibold))
+                .foregroundColor(.white)
+                .frame(width: 56, height: 56)
+                .background(
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    AppTheme.AccentColors.primary,
+                                    AppTheme.AccentColors.secondary
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                )
+                .shadow(
+                    color: AppTheme.AccentColors.primary.opacity(0.4),
+                    radius: 20,
+                    y: 8
+                )
+        }
+        .scaleEffect(isPressed ? 0.9 : (appeared ? 1 : 0))
+        .opacity(appeared ? 1 : 0)
+        .onAppear {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.5)) {
+                appeared = true
+            }
+        }
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in
+                    withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
+                        isPressed = true
                     }
                 }
+                .onEnded { _ in
+                    withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
+                        isPressed = false
+                    }
+                }
+        )
+    }
+}
+
+// MARK: - New Chat Sheet
+
+struct NewChatSheet: View {
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                AppTheme.GradientColors.deepBlack
+                    .ignoresSafeArea()
+                
+                VStack {
+                    Text("Start a new conversation")
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .padding()
+                    
+                    Spacer()
+                }
+            }
+            .navigationTitle("New Chat")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .foregroundColor(.white)
+                }
+            }
         }
     }
 }

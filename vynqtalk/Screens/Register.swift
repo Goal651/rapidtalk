@@ -17,6 +17,9 @@ struct RegisterScreen: View {
     @State private var confirmPassword: String = ""
     @State private var showSuccessModal: Bool = false
     @State private var isLoading: Bool = false
+    @State private var appeared = false
+    @State private var showPassword = false
+    @State private var showConfirmPassword = false
     
     @AppStorage("loggedIn") var loggedIn: Bool = false
     
@@ -37,112 +40,138 @@ struct RegisterScreen: View {
     }
     
     var body: some View {
-        GeometryReader { geometry in
-            let spacing = ResponsiveSpacing(screenWidth: geometry.size.width)
-            let isLandscape = geometry.size.width > geometry.size.height
+        ZStack {
+            // Deep black background like onboarding
+            AppTheme.GradientColors.deepBlack
+                .ignoresSafeArea()
             
-            ZStack {
-                // Animated Gradient Background
-                AnimatedGradientBackground(configuration: .primary)
-                
-                ScrollView {
-                    VStack(spacing: spacing.formSpacing) {
-                        // Title Section
-                        VStack(spacing: AppTheme.Spacing.s) {
-                            Text("Create your account")
-                                .font(isLandscape ? AppTheme.Typography.body : AppTheme.Typography.title3)
-                                .foregroundColor(AppTheme.TextColors.secondary)
-                            
-                            Text("Register")
-                                .font(isLandscape ? AppTheme.Typography.title : AppTheme.Typography.largeTitle)
-                                .foregroundColor(AppTheme.TextColors.primary)
-                        }
-                        .padding(.top, isLandscape ? AppTheme.Spacing.m : spacing.topPadding)
+            ScrollView {
+                VStack(spacing: 32) {
+                    // Header with floating animation
+                    VStack(spacing: 16) {
+                        // 3D Register illustration
+                        registerIllustration
+                            .frame(height: 180)
+                            .opacity(appeared ? 1 : 0)
+                            .scaleEffect(appeared ? 1 : 0.8)
+                            .offset(y: appeared ? 0 : 30)
                         
+                        Text("Create Account")
+                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                            .opacity(appeared ? 1 : 0)
+                            .offset(y: appeared ? 0 : 20)
+                        
+                        Text("Join VynqTalk and start connecting\nwith friends around the world")
+                            .font(.system(size: 16, weight: .medium, design: .rounded))
+                            .foregroundColor(.white.opacity(0.7))
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(2)
+                            .opacity(appeared ? 1 : 0)
+                    }
+                    .padding(.top, 40)
+                    
+                    // Form with modern cards
+                    VStack(spacing: 20) {
                         // Name Field
-                        CustomTextField(
-                            label: "Name",
-                            placeholder: "Enter your name",
+                        ModernTextField(
+                            label: "Full Name",
+                            placeholder: "Enter your full name",
                             text: $name,
-                            keyboardType: .default
+                            icon: "person.fill"
                         )
-                        .padding(.horizontal, spacing.horizontalPadding)
                         
-                        // Email Field with Validation
-                        CustomTextField(
+                        // Email Field
+                        ModernTextField(
                             label: "Email",
                             placeholder: "Enter your email",
                             text: $email,
                             keyboardType: .emailAddress,
+                            icon: "envelope.fill",
                             validation: isValidEmail,
                             errorMessage: "Invalid email format"
                         )
-                        .padding(.horizontal, spacing.horizontalPadding)
                         
                         // Password Field
-                        CustomTextField(
+                        ModernTextField(
                             label: "Password",
-                            placeholder: "Enter password",
+                            placeholder: "Create a password",
                             text: $password,
-                            isSecure: true
+                            isSecure: !showPassword,
+                            icon: "lock.fill",
+                            trailingIcon: showPassword ? "eye.slash.fill" : "eye.fill",
+                            trailingAction: { showPassword.toggle() }
                         )
-                        .padding(.horizontal, spacing.horizontalPadding)
                         
-                        // Confirm Password Field with Match Validation
-                        CustomTextField(
+                        // Confirm Password Field
+                        ModernTextField(
                             label: "Confirm Password",
-                            placeholder: "Re-enter password",
+                            placeholder: "Re-enter your password",
                             text: $confirmPassword,
-                            isSecure: true,
+                            isSecure: !showConfirmPassword,
+                            icon: "lock.fill",
+                            trailingIcon: showConfirmPassword ? "eye.slash.fill" : "eye.fill",
+                            trailingAction: { showConfirmPassword.toggle() },
                             validation: { _ in passwordsMatch },
                             errorMessage: "Passwords do not match"
                         )
-                        .padding(.horizontal, spacing.horizontalPadding)
-                        
-                        // Register Button
-                        CustomButton(
-                            title: "Register",
-                            style: .primary,
-                            action: handleRegister,
-                            isLoading: isLoading,
-                            isDisabled: !isFormValid
-                        )
-                        .padding(.horizontal, spacing.horizontalPadding)
-                        .padding(.top, AppTheme.Spacing.m)
-                        .padding(.bottom, isLandscape ? AppTheme.Spacing.m : 0)
-                        
-                        if !isLandscape {
-                            Spacer()
+                    }
+                    .opacity(appeared ? 1 : 0)
+                    .offset(y: appeared ? 0 : 30)
+                    
+                    // Register Button
+                    ModernButton(
+                        title: "Create Account",
+                        style: .primary,
+                        isLoading: isLoading,
+                        isDisabled: !isFormValid,
+                        icon: "person.badge.plus"
+                    ) {
+                        handleRegister()
+                    }
+                    .padding(.horizontal, 24)
+                    .opacity(appeared ? 1 : 0)
+                    .offset(y: appeared ? 0 : 40)
+                    
+                    // Terms text
+                    Text("By creating an account, you agree to our\n**Terms of Service** and **Privacy Policy**")
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundColor(.white.opacity(0.6))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 40)
+                        .opacity(appeared ? 1 : 0)
+                    
+                    Spacer(minLength: 40)
+                }
+            }
+            
+            // Success Modal
+            if showSuccessModal {
+                ModernSuccessModal(
+                    userName: name,
+                    onDismiss: {
+                        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                            showSuccessModal = false
+                        }
+                        // Navigate to Home Screen after modal dismisses
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            nav.reset(to: .main)
                         }
                     }
-                    .frame(maxWidth: spacing.contentMaxWidth)
-                    .frame(width: geometry.size.width)
-                    .frame(minHeight: geometry.size.height)
-                }
-                
-                // Success Modal
-                if showSuccessModal {
-                    RegisterSuccessModal(
-                        userName: name,
-                        onDismiss: {
-                            withAnimation(AppTheme.AnimationCurves.easeOut) {
-                                showSuccessModal = false
-                            }
-                            // Navigate to Home Screen after modal dismisses
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                nav.reset(to: .main)
-                            }
-                        }
-                    )
-                    .transition(.scale.combined(with: .opacity))
-                    .zIndex(1)
-                }
+                )
+                .transition(.scale.combined(with: .opacity))
+                .zIndex(1)
             }
         }
         .navigationBarBackButtonHidden()
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                BackButton()
+                ModernBackButton()
+            }
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.1)) {
+                appeared = true
             }
         }
         .transition(
@@ -151,6 +180,97 @@ struct RegisterScreen: View {
                 removal: .move(edge: .leading).combined(with: .opacity)
             )
         )
+    }
+    
+    // MARK: - Register Illustration
+    
+    @State private var floatingOffset: CGFloat = 0
+    
+    @ViewBuilder
+    private var registerIllustration: some View {
+        ZStack {
+            // Base platform
+            Ellipse()
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            AppTheme.AccentColors.online.opacity(0.3),
+                            AppTheme.AccentColors.online.opacity(0.1)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .frame(width: 120, height: 30)
+                .shadow(color: AppTheme.AccentColors.online.opacity(0.2), radius: 12, y: 6)
+                .offset(y: 35)
+                .offset(y: floatingOffset * 0.5)
+            
+            // Floating user cards
+            HStack(spacing: -10) {
+                // Left card
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(
+                        LinearGradient(
+                            colors: [AppTheme.AccentColors.primary, AppTheme.AccentColors.primary.opacity(0.8)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 60, height: 45)
+                    .overlay(
+                        Image(systemName: "person.fill")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(.white)
+                    )
+                    .shadow(color: AppTheme.AccentColors.primary.opacity(0.4), radius: 12, y: 6)
+                    .rotation3DEffect(.degrees(-15), axis: (x: 0, y: 1, z: 0))
+                    .offset(y: floatingOffset * 1.2)
+                
+                // Center card (main)
+                RoundedRectangle(cornerRadius: 18)
+                    .fill(
+                        LinearGradient(
+                            colors: [AppTheme.AccentColors.online, AppTheme.AccentColors.online.opacity(0.8)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 70, height: 55)
+                    .overlay(
+                        Image(systemName: "person.badge.plus.fill")
+                            .font(.system(size: 24, weight: .semibold))
+                            .foregroundColor(.white)
+                    )
+                    .shadow(color: AppTheme.AccentColors.online.opacity(0.4), radius: 15, y: 8)
+                    .offset(y: floatingOffset)
+                    .zIndex(1)
+                
+                // Right card
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(hex: "EC4899"), Color(hex: "EC4899").opacity(0.8)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 60, height: 45)
+                    .overlay(
+                        Image(systemName: "person.fill")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(.white)
+                    )
+                    .shadow(color: Color(hex: "EC4899").opacity(0.4), radius: 12, y: 6)
+                    .rotation3DEffect(.degrees(15), axis: (x: 0, y: 1, z: 0))
+                    .offset(y: floatingOffset * 0.8)
+            }
+        }
+        .onAppear {
+            withAnimation(.easeInOut(duration: 2.5).repeatForever(autoreverses: true)) {
+                floatingOffset = -8
+            }
+        }
     }
     
     // MARK: - Actions
@@ -166,7 +286,7 @@ struct RegisterScreen: View {
                 
                 if success {
                     loggedIn = true
-                    withAnimation(AppTheme.AnimationCurves.easeOut) {
+                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
                         showSuccessModal = true
                     }
                 }
@@ -175,4 +295,114 @@ struct RegisterScreen: View {
             }
         }
     }
+}
+
+// MARK: - Modern Success Modal
+
+struct ModernSuccessModal: View {
+    let userName: String
+    let onDismiss: () -> Void
+    @State private var appeared = false
+    @State private var confettiOffset: CGFloat = 0
+    
+    var body: some View {
+        ZStack {
+            // Backdrop
+            Color.black.opacity(0.7)
+                .ignoresSafeArea()
+            
+            // Modal Card
+            VStack(spacing: 32) {
+                // Success Animation
+                ZStack {
+                    // Confetti particles
+                    ForEach(0..<8) { index in
+                        Circle()
+                            .fill(confettiColors[index % confettiColors.count])
+                            .frame(width: 8, height: 8)
+                            .offset(
+                                x: cos(Double(index) * .pi / 4) * (appeared ? 60 : 0),
+                                y: sin(Double(index) * .pi / 4) * (appeared ? 60 : 0)
+                            )
+                            .opacity(appeared ? 0 : 1)
+                    }
+                    
+                    // Success icon
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 80, weight: .semibold))
+                        .foregroundColor(AppTheme.AccentColors.online)
+                        .scaleEffect(appeared ? 1 : 0.3)
+                        .rotationEffect(.degrees(appeared ? 0 : -180))
+                }
+                .frame(height: 120)
+                
+                // Content
+                VStack(spacing: 16) {
+                    Text("Welcome to VynqTalk!")
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+                    
+                    Text("Hi **\(userName)**! Your account has been created successfully. You're ready to start connecting with friends.")
+                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .foregroundColor(.white.opacity(0.8))
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(3)
+                }
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 30)
+                
+                // Continue Button
+                ModernButton(
+                    title: "Let's Go!",
+                    style: .primary,
+                    icon: "arrow.right"
+                ) {
+                    onDismiss()
+                }
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 40)
+            }
+            .padding(40)
+            .background(
+                RoundedRectangle(cornerRadius: 28)
+                    .fill(AppTheme.GradientColors.deepBlack)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 28)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [
+                                        AppTheme.AccentColors.online.opacity(0.3),
+                                        AppTheme.AccentColors.primary.opacity(0.2)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 2
+                            )
+                    )
+                    .shadow(
+                        color: AppTheme.AccentColors.online.opacity(0.2),
+                        radius: 40,
+                        y: 20
+                    )
+            )
+            .padding(.horizontal, 32)
+            .scaleEffect(appeared ? 1 : 0.7)
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.8, dampingFraction: 0.6)) {
+                appeared = true
+            }
+        }
+    }
+    
+    private let confettiColors: [Color] = [
+        AppTheme.AccentColors.primary,
+        AppTheme.AccentColors.online,
+        Color(hex: "EC4899"),
+        Color(hex: "FB923C"),
+        Color(hex: "8B5CF6"),
+        AppTheme.AccentColors.secondary
+    ]
 }

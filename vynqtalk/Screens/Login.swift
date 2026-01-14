@@ -16,6 +16,8 @@ struct LoginScreen: View {
     @State private var modalTitle: String = ""
     @State private var modalDescription: String = ""
     @State private var isLoading: Bool = false
+    @State private var appeared = false
+    @State private var showPassword = false
     
     func isValidEmail(_ email: String) -> Bool {
         let regex = #"^\S+@\S+\.\S+$"#
@@ -23,113 +25,127 @@ struct LoginScreen: View {
     }
     
     var body: some View {
-        GeometryReader { geometry in
-            let spacing = ResponsiveSpacing(screenWidth: geometry.size.width)
-            let isLandscape = geometry.size.width > geometry.size.height
+        ZStack {
+            // Deep black background like onboarding
+            AppTheme.GradientColors.deepBlack
+                .ignoresSafeArea()
             
-            ZStack {
-                // AnimatedGradientBackground
-                AnimatedGradientBackground()
-                    .ignoresSafeArea()
-                
-                // Main content
-                ScrollView {
-                    VStack(spacing: spacing.formSpacing) {
-                        // Title
-                        VStack(spacing: AppTheme.Spacing.s) {
-                            Text("Welcome Back")
-                                .font(isLandscape ? AppTheme.Typography.title3 : AppTheme.Typography.title2)
-                                .foregroundColor(AppTheme.TextColors.secondary)
-                            
-                            Text("Login")
-                                .font(isLandscape ? AppTheme.Typography.title : AppTheme.Typography.largeTitle)
-                                .foregroundColor(AppTheme.TextColors.primary)
-                        }
-                        .padding(.top, isLandscape ? AppTheme.Spacing.m : spacing.topPadding)
+            ScrollView {
+                VStack(spacing: 32) {
+                    // Header with floating animation
+                    VStack(spacing: 16) {
+                        // 3D Welcome illustration
+                        welcomeIllustration
+                            .frame(height: 200)
+                            .opacity(appeared ? 1 : 0)
+                            .scaleEffect(appeared ? 1 : 0.8)
+                            .offset(y: appeared ? 0 : 30)
                         
-                        // Email Input
-                        CustomTextField(
+                        Text("Welcome Back")
+                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                            .opacity(appeared ? 1 : 0)
+                            .offset(y: appeared ? 0 : 20)
+                        
+                        Text("Sign in to continue your conversations")
+                            .font(.system(size: 16, weight: .medium, design: .rounded))
+                            .foregroundColor(.white.opacity(0.7))
+                            .multilineTextAlignment(.center)
+                            .opacity(appeared ? 1 : 0)
+                    }
+                    .padding(.top, 60)
+                    
+                    // Form with modern cards
+                    VStack(spacing: 20) {
+                        // Email Field
+                        ModernTextField(
                             label: "Email",
                             placeholder: "Enter your email",
                             text: $email,
                             keyboardType: .emailAddress,
+                            icon: "envelope.fill",
                             validation: isValidEmail,
                             errorMessage: "Invalid email format"
                         )
-                        .padding(.horizontal, spacing.horizontalPadding)
                         
-                        // Password Input
-                        CustomTextField(
+                        // Password Field
+                        ModernTextField(
                             label: "Password",
                             placeholder: "Enter your password",
                             text: $password,
-                            isSecure: true
+                            isSecure: !showPassword,
+                            icon: "lock.fill",
+                            trailingIcon: showPassword ? "eye.slash.fill" : "eye.fill",
+                            trailingAction: { showPassword.toggle() }
                         )
-                        .padding(.horizontal, spacing.horizontalPadding)
                         
-                        // Login button
-                        CustomButton(
-                            title: "Login",
-                            style: .primary,
-                            action: {
-                                Task {
-                                    isLoading = true
-                                    let ok = await authVM.login(email: email, password: password)
-                                    isLoading = false
-                                    
-                                    if ok {
-                                        wsM.connect()
-                                    } else {
-                                        modalTitle = "Login Failed"
-                                        modalDescription = "Please check your email/password and try again."
-                                        withAnimation { showModal = true }
-                                    }
-                                }
-                            },
-                            isLoading: isLoading,
-                            isDisabled: email.isEmpty || password.isEmpty || !isValidEmail(email)
-                        )
-                        .padding(.horizontal, spacing.horizontalPadding)
-                        .padding(.top, AppTheme.Spacing.m)
-                        
-                        // Forgot password
-                        Button(action: {}) {
-                            Text("Forgot Password?")
-                                .font(AppTheme.Typography.footnote)
-                                .foregroundColor(AppTheme.TextColors.secondary)
-                        }
-                        .padding(.top, AppTheme.Spacing.s)
-                        .padding(.bottom, isLandscape ? AppTheme.Spacing.m : 0)
-                        
-                        if !isLandscape {
+                        // Forgot Password
+                        HStack {
                             Spacer()
-                        }
-                    }
-                    .frame(maxWidth: spacing.contentMaxWidth)
-                    .frame(width: geometry.size.width)
-                    .frame(minHeight: geometry.size.height)
-                }
-                
-                // Modal overlay
-                if showModal {
-                    ModalView(
-                        title: modalTitle,
-                        description: modalDescription,
-                        onClose: { 
-                            withAnimation {
-                                showModal = false
+                            Button(action: {}) {
+                                Text("Forgot Password?")
+                                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                                    .foregroundColor(AppTheme.AccentColors.primary)
                             }
                         }
-                    )
-                    .transition(.scale.combined(with: .opacity))
-                    .zIndex(1)
+                        .padding(.horizontal, 24)
+                    }
+                    .opacity(appeared ? 1 : 0)
+                    .offset(y: appeared ? 0 : 30)
+                    
+                    // Login Button
+                    ModernButton(
+                        title: "Sign In",
+                        style: .primary,
+                        isLoading: isLoading,
+                        isDisabled: email.isEmpty || password.isEmpty || !isValidEmail(email)
+                    ) {
+                        Task {
+                            isLoading = true
+                            let ok = await authVM.login(email: email, password: password)
+                            isLoading = false
+                            
+                            if ok {
+                                wsM.connect()
+                            } else {
+                                modalTitle = "Login Failed"
+                                modalDescription = "Please check your email/password and try again."
+                                withAnimation { showModal = true }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                    .opacity(appeared ? 1 : 0)
+                    .offset(y: appeared ? 0 : 40)
+                    
+                    Spacer(minLength: 40)
                 }
+            }
+            
+            // Modal overlay
+            if showModal {
+                ModernModal(
+                    title: modalTitle,
+                    description: modalDescription,
+                    onClose: { 
+                        withAnimation {
+                            showModal = false
+                        }
+                    }
+                )
+                .transition(.scale.combined(with: .opacity))
+                .zIndex(1)
             }
         }
         .navigationBarBackButtonHidden()
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                BackButton()
+                ModernBackButton()
+            }
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.1)) {
+                appeared = true
             }
         }
         .transition(
@@ -138,5 +154,55 @@ struct LoginScreen: View {
                 removal: .move(edge: .leading).combined(with: .opacity)
             )
         )
+    }
+    
+    // MARK: - Welcome Illustration
+    
+    @State private var floatingOffset: CGFloat = 0
+    
+    @ViewBuilder
+    private var welcomeIllustration: some View {
+        ZStack {
+            // Base platform
+            Ellipse()
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            AppTheme.AccentColors.primary.opacity(0.3),
+                            AppTheme.AccentColors.primary.opacity(0.1)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .frame(width: 140, height: 35)
+                .shadow(color: AppTheme.AccentColors.primary.opacity(0.2), radius: 15, y: 8)
+                .offset(y: 40)
+                .offset(y: floatingOffset * 0.5)
+            
+            // Floating login card
+            RoundedRectangle(cornerRadius: 20)
+                .fill(
+                    LinearGradient(
+                        colors: [AppTheme.AccentColors.primary, AppTheme.AccentColors.primary.opacity(0.8)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: 80, height: 60)
+                .overlay(
+                    Image(systemName: "person.crop.circle.fill")
+                        .font(.system(size: 30, weight: .semibold))
+                        .foregroundColor(.white)
+                )
+                .shadow(color: AppTheme.AccentColors.primary.opacity(0.4), radius: 15, y: 8)
+                .rotation3DEffect(.degrees(-8), axis: (x: 0, y: 1, z: 0))
+                .offset(y: floatingOffset)
+        }
+        .onAppear {
+            withAnimation(.easeInOut(duration: 2.5).repeatForever(autoreverses: true)) {
+                floatingOffset = -10
+            }
+        }
     }
 }

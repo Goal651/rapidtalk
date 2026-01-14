@@ -14,8 +14,8 @@ struct OnboardingScreen: View {
     
     var body: some View {
         ZStack {
-            // Deep black background
-            AppTheme.GradientColors.deepBlack
+            // Pure black background
+            Color.black
                 .ignoresSafeArea()
             
             VStack(spacing: 0) {
@@ -81,7 +81,7 @@ struct OnboardingScreen: View {
                         }) {
                             Text("Get Started")
                                 .font(.system(size: 17, weight: .semibold, design: .rounded))
-                                .foregroundColor(AppTheme.GradientColors.deepBlack)
+                                .foregroundColor(.black)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 56)
                                 .background(.white)
@@ -115,7 +115,7 @@ struct OnboardingScreen: View {
                         }) {
                             Text("Continue")
                                 .font(.system(size: 17, weight: .semibold, design: .rounded))
-                                .foregroundColor(AppTheme.GradientColors.deepBlack)
+                                .foregroundColor(.black)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 56)
                                 .background(.white)
@@ -461,7 +461,7 @@ struct OnboardingPage: View {
                         .frame(width: 16, height: 16)
                         .overlay(
                             Circle()
-                                .stroke(AppTheme.GradientColors.deepBlack, lineWidth: 3)
+                                .stroke(.black, lineWidth: 3)
                         )
                         .offset(x: 24, y: 24)
                         .opacity(isOnline ? 1 : 0)
