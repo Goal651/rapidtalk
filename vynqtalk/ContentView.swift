@@ -20,7 +20,8 @@ struct ContentView: View {
                     WelcomeScreen()
                 }
             }
-                .navigationDestination(for: AppRoute.self) { route in
+            .navigationDestination(for: AppRoute.self) { route in
+                Group {
                     switch route {
                     case .welcome:
                         WelcomeScreen()
@@ -34,6 +35,14 @@ struct ContentView: View {
                         ChatScreen(userId: userId, userName: name)
                     }
                 }
+                .transition(
+                    .asymmetric(
+                        insertion: .move(edge: .trailing).combined(with: .opacity),
+                        removal: .move(edge: .leading).combined(with: .opacity)
+                    )
+                )
+            }
         }
+        .animation(.easeInOut(duration: AppTheme.AnimationDuration.slow), value: nav.path)
     }
 }
