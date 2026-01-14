@@ -16,12 +16,14 @@ struct WebSocketSendMessage: Encodable {
     let receiverId: String  // Changed from Int to String (UUID)
     let content: String
     let messageType: String  // "TEXT", "IMAGE", etc.
+    let replyToId: String?  // UUID of message being replied to
     
-    init(receiverId: String, content: String, messageType: MessageType = .text) {
+    init(receiverId: String, content: String, messageType: MessageType = .text, replyToId: String? = nil) {
         self.type = "chat_message"
         self.receiverId = receiverId
         self.content = content
         self.messageType = messageType.rawValue
+        self.replyToId = replyToId
     }
 }
 
@@ -30,6 +32,12 @@ struct WebSocketTypingMessage: Encodable {
     let userId: String
     let receiverId: String
     let isTyping: Bool
+}
+
+struct WebSocketReactionMessage: Encodable {
+    let type: String = "reaction"
+    let emoji: String
+    let messageId: String
 }
 
 struct WebSocketResponse: Decodable {
@@ -61,17 +69,40 @@ struct WebSocketResponse: Decodable {
         let fileName: String?
         let edited: Bool?
         
+        // Reaction fields
+        let emoji: String?
+        let messageId: String?
+        let createdAt: Date?
+        
         enum CodingKeys: String, CodingKey {
             case userId, online, lastActive, userIds
             case isTyping
             case id, content, timestamp, type, fileName, edited
             case senderId, receiverId
             case sender, receiver
+            case emoji, messageId
+            case createdAt = "created_at"
         }
     }
     
     var parsedData: WebSocketData? {
         guard let data = data else { return nil }
+        
+        // Check if it's a reaction
+        if message == "reaction",
+           let id = data.id,
+           let emoji = data.emoji,
+           let userId = data.userId,
+           let messageId = data.messageId {
+            let reaction = ReactionUpdate(
+                id: id,
+                emoji: emoji,
+                userId: userId,
+                messageId: messageId,
+                createdAt: data.createdAt
+            )
+            return .reaction(reaction)
+        }
         
         // Check if it's an online users list update
         if message == "online_users", let userIds = data.userIds {
@@ -146,6 +177,7 @@ enum WebSocketData {
     case userStatus(UserStatus)
     case onlineUsersList([String])
     case typing(userId: String, isTyping: Bool)
+    case reaction(ReactionUpdate)
     case unknown
 }
 
@@ -153,6 +185,19 @@ struct UserStatus: Decodable {
     let userId: String  // Changed from Int to String (UUID)
     let online: Bool
     let lastActive: Date?
+}
+
+struct ReactionUpdate: Decodable {
+    let id: String
+    let emoji: String
+    let userId: String
+    let messageId: String
+    let createdAt: Date?
+    
+    enum CodingKeys: String, CodingKey {
+        case id, emoji, userId, messageId
+        case createdAt = "created_at"
+    }
 }
 
 // MARK: - WebSocket Manager
@@ -163,6 +208,7 @@ final class WebSocketManager: ObservableObject {
     @Published var incomingMessage: Message?
     @Published var userStatusUpdate: UserStatus?
     @Published var onlineUserIds: Set<String> = [] // Array of currently online user IDs
+    @Published var reactionUpdate: ReactionUpdate?
     @Published var typingUsers: [String: Bool] = [:] // userId: isTyping
     @Published var userLastActiveCache: [String: Date] = [:] // Cache last active times
     
@@ -376,6 +422,12 @@ final class WebSocketManager: ObservableObject {
                 print("✅ WebSocket: User \(userId) is \(isTyping ? "typing" : "not typing")")
                 #endif
                 
+            case .reaction(let reaction):
+                self?.reactionUpdate = reaction
+                #if DEBUG
+                print("✅ WebSocket: Received reaction \(reaction.emoji) for message \(reaction.messageId)")
+                #endif
+                
             case .unknown:
                 #if DEBUG
                 print("⚠️ WebSocket: Unknown data type for message: \(response.message)")
@@ -386,11 +438,12 @@ final class WebSocketManager: ObservableObject {
     
     // MARK: - Sending Messages
     
-    func sendChatMessage(receiverId: String, content: String, type: MessageType = .text) {
+    func sendChatMessage(receiverId: String, content: String, type: MessageType = .text, replyToId: String? = nil) {
         let message = WebSocketSendMessage(
             receiverId: receiverId,
             content: content,
-            messageType: type
+            messageType: type,
+            replyToId: replyToId
         )
         
         guard let data = try? JSONEncoder().encode(message),
@@ -401,6 +454,13 @@ final class WebSocketManager: ObservableObject {
             return
         }
         
+        #if DEBUG
+        if let replyId = replyToId {
+            print("📤 WebSocket: Sending message with replyToId: \(replyId)")
+        }
+        print("📤 WebSocket: Message payload: \(string)")
+        #endif
+        
         task?.send(.string(string)) { error in
             if let error = error {
                 #if DEBUG
@@ -408,7 +468,7 @@ final class WebSocketManager: ObservableObject {
                 #endif
             } else {
                 #if DEBUG
-                print("📤 WebSocket: Sent message to user \(receiverId)")
+                print("✅ WebSocket: Message sent to user \(receiverId)")
                 #endif
             }
         }
@@ -437,6 +497,38 @@ final class WebSocketManager: ObservableObject {
             } else {
                 #if DEBUG
                 print("📤 WebSocket: Sent typing indicator (isTyping: \(isTyping)) to user \(receiverId)")
+                #endif
+            }
+        }
+    }
+    
+    func sendReaction(emoji: String, messageId: String) {
+        let reactionMessage = WebSocketReactionMessage(
+            emoji: emoji,
+            messageId: messageId
+        )
+        
+        guard let data = try? JSONEncoder().encode(reactionMessage),
+              let string = String(data: data, encoding: .utf8) else {
+            #if DEBUG
+            print("❌ Failed to encode reaction")
+            #endif
+            return
+        }
+        
+        #if DEBUG
+        print("📤 WebSocket: Sending reaction \(emoji) to message \(messageId)")
+        print("📤 WebSocket: Reaction payload: \(string)")
+        #endif
+        
+        task?.send(.string(string)) { error in
+            if let error = error {
+                #if DEBUG
+                print("❌ Failed to send reaction: \(error.localizedDescription)")
+                #endif
+            } else {
+                #if DEBUG
+                print("✅ WebSocket: Reaction sent")
                 #endif
             }
         }

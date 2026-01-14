@@ -10,8 +10,11 @@ import AVKit
 struct MessageBubble: View {
     @EnvironmentObject var authVM: AuthViewModel
     let message: Message
+    let onReply: (Message) -> Void
+    let onReact: (Message, String) -> Void  // Now includes emoji
     @State private var appeared = false
     @State private var showImageViewer = false
+    @State private var showReactionPicker = false
 
     var isMe: Bool {
         message.sender?.id == authVM.userId
@@ -41,6 +44,13 @@ struct MessageBubble: View {
         let cleanPath = content.hasPrefix("/") ? content : "/\(content)"
         return URL(string: "\(baseURL)\(cleanPath)")
     }
+    
+    // Check if reply message has valid content
+    private var hasValidReply: Bool {
+        guard let replyTo = message.replyTo else { return false }
+        // Check if it has actual content or is just a placeholder
+        return replyTo.content != nil && !replyTo.content!.isEmpty
+    }
 
     var body: some View {
         HStack(alignment: .bottom, spacing: AppTheme.Spacing.s) {
@@ -63,6 +73,24 @@ struct MessageBubble: View {
                     }
                 }
                 .frame(maxWidth: messageType == .text ? 260 : 280, alignment: isMe ? .trailing : .leading)
+                .contextMenu {
+                    Button(action: {
+                        onReply(message)
+                    }) {
+                        Label("Reply", systemImage: "arrowshape.turn.up.left")
+                    }
+                    
+                    Button(action: {
+                        showReactionPicker = true
+                    }) {
+                        Label("React", systemImage: "face.smiling")
+                    }
+                }
+                
+                // Reactions
+                if let reactions = message.reactions, !reactions.isEmpty {
+                    ReactionsView(reactions: reactions, currentUserId: authVM.userId)
+                }
                 
                 // Time below the bubble
                 Text(formattedTime)
@@ -90,22 +118,37 @@ struct MessageBubble: View {
                 ImageViewer(imageURL: url)
             }
         }
+        .sheet(isPresented: $showReactionPicker) {
+            ReactionPicker { emoji in
+                onReact(message, emoji)
+            }
+            .presentationDetents([.height(280)])
+            .presentationDragIndicator(.visible)
+        }
     }
     
     // MARK: - Text Message
     
     private var textMessageView: some View {
-        Text(message.content ?? "")
-            .foregroundColor(AppTheme.TextColors.primary)
-            .font(AppTheme.Typography.body)
-            .padding(AppTheme.Spacing.m)
-            .background(messageBubbleBackground)
-            .cornerRadius(AppTheme.CornerRadius.l)
-            .shadow(
-                color: isMe ? AppTheme.AccentColors.primary.opacity(0.3) : Color.black.opacity(0.2),
-                radius: isMe ? 8 : 4,
-                y: 2
-            )
+        VStack(alignment: .leading, spacing: 0) {
+            // Show replied message if exists and has valid content
+            if hasValidReply, let repliedMsg = message.replyTo {
+                RepliedMessageView(repliedMessage: repliedMsg, isMe: isMe)
+                    .padding(.bottom, 8)
+            }
+            
+            Text(message.content ?? "")
+                .foregroundColor(AppTheme.TextColors.primary)
+                .font(AppTheme.Typography.body)
+        }
+        .padding(AppTheme.Spacing.m)
+        .background(messageBubbleBackground)
+        .cornerRadius(AppTheme.CornerRadius.l)
+        .shadow(
+            color: isMe ? AppTheme.AccentColors.primary.opacity(0.3) : Color.black.opacity(0.2),
+            radius: isMe ? 8 : 4,
+            y: 2
+        )
     }
     
     // MARK: - Image Message
@@ -115,6 +158,12 @@ struct MessageBubble: View {
             showImageViewer = true
         }) {
             VStack(alignment: .leading, spacing: 0) {
+                // Show replied message if exists and has valid content
+                if hasValidReply, let repliedMsg = message.replyTo {
+                    RepliedMessageView(repliedMessage: repliedMsg, isMe: isMe)
+                        .padding(8)
+                }
+                
                 if let url = fileURL {
                     AsyncImage(url: url) { phase in
                         switch phase {
@@ -163,6 +212,12 @@ struct MessageBubble: View {
     
     private var videoMessageView: some View {
         VStack(alignment: .leading, spacing: 0) {
+            // Show replied message if exists and has valid content
+            if hasValidReply, let repliedMsg = message.replyTo {
+                RepliedMessageView(repliedMessage: repliedMsg, isMe: isMe)
+                    .padding(8)
+            }
+            
             if let url = fileURL {
                 VideoPlayer(player: AVPlayer(url: url))
                     .frame(width: 240, height: 240)
@@ -183,31 +238,39 @@ struct MessageBubble: View {
     // MARK: - File Message
     
     private var fileMessageView: some View {
-        HStack(spacing: 12) {
-            Image(systemName: messageType == .audio ? "waveform" : "doc.fill")
-                .font(.system(size: 24))
-                .foregroundColor(AppTheme.AccentColors.primary)
-                .frame(width: 48, height: 48)
-                .background(Circle().fill(AppTheme.AccentColors.primary.opacity(0.2)))
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(message.fileName ?? "File")
-                    .font(AppTheme.Typography.body)
-                    .foregroundColor(AppTheme.TextColors.primary)
-                    .lineLimit(1)
-                
-                Text(messageType == .audio ? "Audio" : "File")
-                    .font(AppTheme.Typography.caption)
-                    .foregroundColor(AppTheme.TextColors.tertiary)
+        VStack(alignment: .leading, spacing: 0) {
+            // Show replied message if exists and has valid content
+            if hasValidReply, let repliedMsg = message.replyTo {
+                RepliedMessageView(repliedMessage: repliedMsg, isMe: isMe)
+                    .padding(.bottom, 8)
             }
             
-            Spacer()
-            
-            if let url = fileURL {
-                Link(destination: url) {
-                    Image(systemName: "arrow.down.circle.fill")
-                        .font(.system(size: 24))
-                        .foregroundColor(AppTheme.AccentColors.primary)
+            HStack(spacing: 12) {
+                Image(systemName: messageType == .audio ? "waveform" : "doc.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(AppTheme.AccentColors.primary)
+                    .frame(width: 48, height: 48)
+                    .background(Circle().fill(AppTheme.AccentColors.primary.opacity(0.2)))
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(message.fileName ?? "File")
+                        .font(AppTheme.Typography.body)
+                        .foregroundColor(AppTheme.TextColors.primary)
+                        .lineLimit(1)
+                    
+                    Text(messageType == .audio ? "Audio" : "File")
+                        .font(AppTheme.Typography.caption)
+                        .foregroundColor(AppTheme.TextColors.tertiary)
+                }
+                
+                Spacer()
+                
+                if let url = fileURL {
+                    Link(destination: url) {
+                        Image(systemName: "arrow.down.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(AppTheme.AccentColors.primary)
+                    }
                 }
             }
         }

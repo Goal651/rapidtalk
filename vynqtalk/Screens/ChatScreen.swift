@@ -24,6 +24,7 @@ struct ChatScreen: View {
     @State private var selectedMedia: MediaItem?
     @State private var isUploadingMedia = false
     @State private var scrollProxy: ScrollViewProxy?
+    @State private var replyingTo: Message?
     let userId: String  // Changed from Int to String
     let userName: String
     let userAvatar: String?
@@ -145,6 +146,35 @@ struct ChatScreen: View {
         .onChange(of: selectedMedia) { _, newMedia in
             if let media = newMedia {
                 uploadAndSendMedia(media)
+            }
+        }
+        .onChange(of: wsM.reactionUpdate?.id) { _, _ in
+            guard let reaction = wsM.reactionUpdate else { return }
+            
+            // Find the message and update its reactions
+            if let messageIndex = messageVM.messages.firstIndex(where: { $0.id == reaction.messageId }) {
+                let message = messageVM.messages[messageIndex]
+                var updatedReactions = message.reactions ?? []
+                
+                // Add the new reaction
+                let newReaction = Reaction(emoji: reaction.emoji, userId: reaction.userId)
+                updatedReactions.append(newReaction)
+                
+                // Update the message with new reactions
+                let updatedMessage = Message(
+                    id: message.id,
+                    content: message.content,
+                    type: message.type,
+                    sender: message.sender,
+                    receiver: message.receiver,
+                    timestamp: message.timestamp,
+                    fileName: message.fileName,
+                    edited: message.edited,
+                    reactions: updatedReactions,
+                    replyTo: message.replyTo
+                )
+                
+                messageVM.messages[messageIndex] = updatedMessage
             }
         }
     }
@@ -299,8 +329,18 @@ struct ChatScreen: View {
                             .padding(.top, 32)
                     }
                     ForEach(messageVM.messages) { message in
-                        MessageBubble(message: message)
-                            .id(message.id)
+                        MessageBubble(
+                            message: message,
+                            onReply: { msg in
+                                replyingTo = msg
+                            },
+                            onReact: { msg, emoji in
+                                if let messageId = msg.id {
+                                    wsM.sendReaction(emoji: emoji, messageId: messageId)
+                                }
+                            }
+                        )
+                        .id(message.id)
                     }
                     
                     // Show uploading indicator
@@ -359,22 +399,34 @@ struct ChatScreen: View {
     // MARK: - Input Bar
     
     private func inputBar(spacing: ResponsiveSpacing) -> some View {
-        HStack(spacing: 12) {
-            // Attachment button
-            Button(action: {
-                showMediaPicker = true
-            }) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 28, weight: .semibold))
-                    .foregroundColor(AppTheme.AccentColors.primary)
+        VStack(spacing: 0) {
+            // Reply preview
+            if let replyMsg = replyingTo {
+                ReplyPreview(message: replyMsg) {
+                    replyingTo = nil
+                }
+                .padding(.horizontal, spacing.horizontalPadding)
+                .padding(.top, 8)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
-            .disabled(isUploadingMedia)
             
-            messageTextField
-            sendButton
+            HStack(spacing: 12) {
+                // Attachment button
+                Button(action: {
+                    showMediaPicker = true
+                }) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 28, weight: .semibold))
+                        .foregroundColor(AppTheme.AccentColors.primary)
+                }
+                .disabled(isUploadingMedia)
+                
+                messageTextField
+                sendButton
+            }
+            .padding(.horizontal, spacing.horizontalPadding)
+            .padding(.vertical, 16)
         }
-        .padding(.horizontal, spacing.horizontalPadding)
-        .padding(.vertical, 16)
         .background(Color.black.opacity(0.3))
     }
     
@@ -396,9 +448,11 @@ struct ChatScreen: View {
             wsM.sendChatMessage(
                 receiverId: userId,
                 content: messageText,
-                type: .text
+                type: .text,
+                replyToId: replyingTo?.id
             )
             messageText = ""
+            replyingTo = nil
             
             // Scroll to bottom after sending
             if let proxy = scrollProxy {
@@ -533,11 +587,13 @@ struct ChatScreen: View {
                 wsM.sendChatMessage(
                     receiverId: userId,
                     content: fileURL,
-                    type: media.messageType
+                    type: media.messageType,
+                    replyToId: replyingTo?.id
                 )
                 
                 isUploadingMedia = false
                 selectedMedia = nil
+                replyingTo = nil
                 
             } catch {
                 #if DEBUG
