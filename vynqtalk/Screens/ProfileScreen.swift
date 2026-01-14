@@ -35,10 +35,23 @@ struct ProfileScreen: View {
                         title: "Logout",
                         style: .secondary,
                         action: {
-                            authVM.logout()
+                            nav.showAlert(AlertConfig(
+                                title: "Logout",
+                                message: "Are you sure you want to logout?",
+                                primaryButton: .init(
+                                    title: "Logout",
+                                    style: .destructive,
+                                    action: { authVM.logout() }
+                                ),
+                                secondaryButton: .init(
+                                    title: "Cancel",
+                                    style: .cancel,
+                                    action: {}
+                                )
+                            ))
                         },
                         accessibilityLabel: "Logout",
-                        accessibilityHint: "Logs you out and returns to the welcome screen"
+                        accessibilityHint: "Shows confirmation dialog before logging out"
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: AppTheme.CornerRadius.m)

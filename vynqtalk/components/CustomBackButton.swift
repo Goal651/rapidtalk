@@ -1,20 +1,19 @@
-//
-//  BackButton.swift
-//  vynqtalk
-//
-//  Created by wigothehacker on 12/10/25.
-//
-
 import SwiftUI
 
-struct BackButton: View {
-    @Environment(\.dismiss) var dismiss
+struct CustomBackButton: View {
     @EnvironmentObject var nav: NavigationCoordinator
-
+    let title: String?
+    let action: (() -> Void)?
+    
+    init(title: String? = nil, action: (() -> Void)? = nil) {
+        self.title = title
+        self.action = action
+    }
+    
     var body: some View {
         Button(action: {
-            if nav.path.count == 0 {
-                dismiss()
+            if let action = action {
+                action()
             } else {
                 nav.pop()
             }
@@ -22,13 +21,15 @@ struct BackButton: View {
             HStack(spacing: AppTheme.Spacing.s) {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 18, weight: .semibold))
-                Text("Back")
-                    .font(AppTheme.Typography.body)
+                
+                if let title = title {
+                    Text(title)
+                        .font(AppTheme.Typography.body)
+                }
             }
             .foregroundColor(AppTheme.AccentColors.primary)
         }
         .accessibilityLabel("Back")
         .accessibilityHint("Returns to the previous screen")
-        .accessibilityAddTraits(.isButton)
     }
 }

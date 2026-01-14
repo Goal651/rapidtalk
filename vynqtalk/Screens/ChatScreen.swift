@@ -140,9 +140,10 @@ struct ChatScreen: View {
         .navigationBarBackButtonHidden()
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                BackButton()
+                CustomBackButton()
             }
         }
+        .toolbar(.hidden, for: .tabBar)
         .task {
             await messageVM.loadConversation(meId: authVM.userId, otherUserId: userId)
         }
