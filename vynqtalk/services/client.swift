@@ -400,3 +400,64 @@ extension APIClient {
         return decoded
     }
 }
+
+
+// MARK: - Message File Upload
+extension APIClient {
+    func uploadMessageAttachment(fileData: Data, filename: String, mimeType: String) async throws -> APIResponse<String> {
+        guard let url = URL(string: "\(baseURL)/messages/upload") else {
+            throw APIError.invalidResponse
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        
+        if let token = getAuthToken() {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        
+        let boundary = UUID().uuidString
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        
+        var body = Data()
+        
+        // Add file data
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
+        body.append(fileData)
+        body.append("\r\n".data(using: .utf8)!)
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        
+        request.httpBody = body
+        
+        #if DEBUG
+        print("📤 POST /messages/upload")
+        print("📤 File: \(filename) (\(fileData.count) bytes)")
+        #endif
+        
+        let (responseData, response) = try await URLSession.shared.data(for: request)
+        
+        #if DEBUG
+        if let responseString = String(data: responseData, encoding: .utf8) {
+            print("📥 Response: \(responseString)")
+        }
+        #endif
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+        
+        if httpResponse.statusCode == 401 || httpResponse.statusCode == 403 {
+            logout()
+            throw APIError.authenticationRequired
+        }
+        
+        if httpResponse.statusCode >= 400 {
+            throw APIError.serverError(statusCode: httpResponse.statusCode)
+        }
+        
+        let decoded = try Self.jsonDecoder.decode(APIResponse<String>.self, from: responseData)
+        return decoded
+    }
+}

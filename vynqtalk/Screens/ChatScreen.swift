@@ -20,6 +20,9 @@ struct ChatScreen: View {
     @State private var userLastActive: Date?
     @State private var showUserDetails = false
     @State private var typingTimer: Timer?
+    @State private var showMediaPicker = false
+    @State private var selectedMedia: MediaItem?
+    @State private var isUploadingMedia = false
     let userId: String  // Changed from Int to String
     let userName: String
     let userAvatar: String?
@@ -84,10 +87,7 @@ struct ChatScreen: View {
         .navigationBarBackButtonHidden()
         .toolbar(.hidden, for: .tabBar)
         .onAppear {
-            // Initialize online status from WebSocket
             userOnlineStatus = wsM.isUserOnline(userId)
-            
-            // Initialize last active from cache or initial value
             if let cachedLastActive = wsM.getLastActive(for: userId) {
                 userLastActive = cachedLastActive
             }
@@ -107,18 +107,15 @@ struct ChatScreen: View {
             }
         }
         .onChange(of: wsM.onlineUserIds) { _, _ in
-            // Update online status when the online users list changes
             let wasOnline = userOnlineStatus
             userOnlineStatus = wsM.isUserOnline(userId)
             
-            // If user went offline, update last active to now
             if wasOnline && !userOnlineStatus {
                 userLastActive = Date()
                 wsM.updateLastActive(for: userId, date: Date())
             }
         }
         .onChange(of: wsM.userStatusUpdate?.userId) { _, _ in
-            // Update when individual user status changes
             if let status = wsM.userStatusUpdate, status.userId == userId {
                 userOnlineStatus = status.online
                 if let lastActive = status.lastActive {
@@ -127,11 +124,9 @@ struct ChatScreen: View {
             }
         }
         .onChange(of: wsM.typingUsers[userId]) { _, isTyping in
-            // Update typing indicator when the other user's typing status changes
             isOtherUserTyping = isTyping == true
         }
         .onChange(of: messageText) { oldValue, newValue in
-            // Send typing indicator when user types
             handleTypingChange(oldValue: oldValue, newValue: newValue)
         }
         .sheet(isPresented: $showUserDetails) {
@@ -142,6 +137,14 @@ struct ChatScreen: View {
                 isOnline: userOnlineStatus,
                 lastActive: userLastActive
             )
+        }
+        .sheet(isPresented: $showMediaPicker) {
+            MediaPicker(selectedMedia: $selectedMedia)
+        }
+        .onChange(of: selectedMedia) { _, newMedia in
+            if let media = newMedia {
+                uploadAndSendMedia(media)
+            }
         }
     }
     
@@ -297,6 +300,22 @@ struct ChatScreen: View {
                     MessageBubble(message: message)
                 }
                 
+                // Show uploading indicator
+                if isUploadingMedia {
+                    HStack(spacing: 12) {
+                        ProgressView()
+                            .tint(AppTheme.AccentColors.primary)
+                        Text("Uploading...")
+                            .font(AppTheme.Typography.caption)
+                            .foregroundColor(AppTheme.TextColors.secondary)
+                    }
+                    .padding(AppTheme.Spacing.m)
+                    .background(
+                        RoundedRectangle(cornerRadius: AppTheme.CornerRadius.l)
+                            .fill(AppTheme.SurfaceColors.surface)
+                    )
+                }
+                
                 if isOtherUserTyping {
                     TypingIndicator()
                 }
@@ -310,6 +329,16 @@ struct ChatScreen: View {
     
     private func inputBar(spacing: ResponsiveSpacing) -> some View {
         HStack(spacing: 12) {
+            // Attachment button
+            Button(action: {
+                showMediaPicker = true
+            }) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundColor(AppTheme.AccentColors.primary)
+            }
+            .disabled(isUploadingMedia)
+            
             messageTextField
             sendButton
         }
@@ -422,6 +451,82 @@ struct ChatScreen: View {
                 receiverId: userId,
                 isTyping: false
             )
+        }
+    }
+    
+    // MARK: - Media Upload
+    
+    private func uploadAndSendMedia(_ media: MediaItem) {
+        isUploadingMedia = true
+        
+        Task {
+            do {
+                // Compress if image
+                var uploadData = media.data
+                var filename = media.filename
+                
+                if media.type == .image, let image = media.thumbnail {
+                    // Resize and compress image
+                    let resizedImage = resizeImage(image: image, maxSize: 1200)
+                    if let compressedData = resizedImage.jpegData(compressionQuality: 0.7) {
+                        uploadData = compressedData
+                        filename = "image_\(UUID().uuidString).jpg"
+                    }
+                }
+                
+                #if DEBUG
+                print("📤 Uploading \(media.type): \(uploadData.count) bytes")
+                #endif
+                
+                // Step 1: Upload file to REST endpoint
+                let response: APIResponse<String> = try await APIClient.shared.uploadMessageAttachment(
+                    fileData: uploadData,
+                    filename: filename,
+                    mimeType: media.mimeType
+                )
+                
+                guard response.success, let fileURL = response.data else {
+                    throw NSError(domain: "Upload", code: -1, userInfo: [NSLocalizedDescriptionKey: response.message])
+                }
+                
+                #if DEBUG
+                print("✅ File uploaded: \(fileURL)")
+                #endif
+                
+                // Step 2: Send message via WebSocket with file URL
+                wsM.sendChatMessage(
+                    receiverId: userId,
+                    content: fileURL,
+                    type: media.messageType
+                )
+                
+                isUploadingMedia = false
+                selectedMedia = nil
+                
+            } catch {
+                #if DEBUG
+                print("❌ Media upload error: \(error)")
+                #endif
+                isUploadingMedia = false
+                selectedMedia = nil
+            }
+        }
+    }
+    
+    private func resizeImage(image: UIImage, maxSize: CGFloat) -> UIImage {
+        let size = image.size
+        let ratio = size.width / size.height
+        
+        var newSize: CGSize
+        if size.width > size.height {
+            newSize = CGSize(width: maxSize, height: maxSize / ratio)
+        } else {
+            newSize = CGSize(width: maxSize * ratio, height: maxSize)
+        }
+        
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        return renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
         }
     }
 }
