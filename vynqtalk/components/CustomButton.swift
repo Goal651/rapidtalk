@@ -98,14 +98,15 @@ struct CustomButton: View {
                 Color.white
             case .secondary:
                 Color.white.opacity(0.08)
+                    .background(.ultraThinMaterial)
             case .accent:
                 LinearGradient(
                     colors: [
                         AppTheme.AccentColors.primary,
-                        AppTheme.AccentColors.primary.opacity(0.8)
+                        Color(red: 0.45, green: 0.35, blue: 0.90)
                     ],
-                    startPoint: .leading,
-                    endPoint: .trailing
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
                 )
             case .text:
                 Color.clear
@@ -149,7 +150,7 @@ struct CustomButton: View {
         case .primary:
             return Color.white.opacity(0.2)
         case .accent:
-            return AppTheme.AccentColors.primary.opacity(0.3)
+            return AppTheme.AccentColors.primary.opacity(0.4)
         default:
             return Color.clear
         }
@@ -157,8 +158,10 @@ struct CustomButton: View {
     
     private var shadowRadius: CGFloat {
         switch style {
-        case .primary, .accent:
+        case .primary:
             return 8
+        case .accent:
+            return 15
         default:
             return 0
         }

@@ -24,7 +24,7 @@ class UserViewModel:ObservableObject{
         defer { isLoading = false }
 
         do {
-            let response: APIResponse<[User]> = try await APIClient.shared.get("/user/all")
+            let response: APIResponse<[User]> = try await APIClient.shared.get("/users")
             guard response.success, let data = response.data else {
                 errorMessage = response.message
                 users = []

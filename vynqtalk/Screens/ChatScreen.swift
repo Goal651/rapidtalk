@@ -106,13 +106,18 @@ struct ChatScreen: View {
                                     LinearGradient(
                                         colors: [
                                             AppTheme.AccentColors.primary,
-                                            AppTheme.AccentColors.primary.opacity(0.8)
+                                            Color(red: 0.45, green: 0.35, blue: 0.90)
                                         ],
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     )
                                 )
                                 .clipShape(Circle())
+                                .shadow(
+                                    color: AppTheme.AccentColors.primary.opacity(0.4),
+                                    radius: 8,
+                                    y: 2
+                                )
                         }
                         .scaleEffect(isSendButtonPressed ? 0.9 : 1.0)
                         .onLongPressGesture(minimumDuration: .infinity, maximumDistance: .infinity, pressing: { pressing in

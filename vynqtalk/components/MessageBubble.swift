@@ -41,22 +41,34 @@ struct MessageBubble: View {
                 .background(
                     Group {
                         if isMe {
-                            // Gradient background for sent messages
+                            // Vibrant purple gradient for sent messages
                             LinearGradient(
                                 colors: [
-                                    AppTheme.AccentColors.primary,
-                                    AppTheme.AccentColors.primary.opacity(0.8)
+                                    AppTheme.MessageColors.sentStart,
+                                    AppTheme.MessageColors.sentEnd
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         } else {
-                            // Solid background for received messages
-                            AppTheme.SurfaceColors.surfaceMedium
+                            // Elevated dark surface for received messages
+                            AppTheme.MessageColors.received
+                                .overlay(
+                                    LinearGradient(
+                                        colors: [Color.white.opacity(0.05), Color.clear],
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    )
+                                )
                         }
                     }
                 )
                 .cornerRadius(AppTheme.CornerRadius.l)
+                .shadow(
+                    color: isMe ? AppTheme.AccentColors.primary.opacity(0.3) : Color.black.opacity(0.2),
+                    radius: isMe ? 8 : 4,
+                    y: 2
+                )
                 .frame(maxWidth: 260, alignment: isMe ? .trailing : .leading)
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel(accessibilityDescription)

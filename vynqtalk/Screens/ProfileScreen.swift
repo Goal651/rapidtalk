@@ -28,22 +28,22 @@ struct ProfileScreen: View {
 
                     Divider()
                         .overlay(AppTheme.TextColors.tertiary)
-
-                    Button {
-                        APIClient.shared.logout()
-                        authVM.loggedIn = false
-                        authVM.authToken = ""
-                        authVM.userId = 0
-                        nav.reset(to: .welcome)
-                    } label: {
-                        Text("Logout")
-                            .font(AppTheme.Typography.headline)
-                            .foregroundColor(AppTheme.TextColors.primary)
-                            .frame(maxWidth: .infinity)
-                            .padding(AppTheme.Spacing.m)
-                            .background(AppTheme.AccentColors.error)
-                            .cornerRadius(AppTheme.CornerRadius.l)
-                    }
+                        .padding(.vertical, AppTheme.Spacing.m)
+                    
+                    // Logout Button
+                    CustomButton(
+                        title: "Logout",
+                        style: .secondary,
+                        action: {
+                            authVM.logout()
+                        },
+                        accessibilityLabel: "Logout",
+                        accessibilityHint: "Logs you out and returns to the welcome screen"
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppTheme.CornerRadius.m)
+                            .stroke(AppTheme.AccentColors.error.opacity(0.6), lineWidth: 2)
+                    )
                     .padding(.top, AppTheme.Spacing.s)
                 } else {
                     Text("No profile loaded")

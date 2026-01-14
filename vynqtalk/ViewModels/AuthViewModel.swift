@@ -21,6 +21,15 @@ class AuthViewModel:ObservableObject{
     }
     
     @MainActor
+    func logout() {
+        APIClient.shared.logout()
+        loggedIn = false
+        authToken = ""
+        userId = 0
+        nav.popToRoot()
+    }
+    
+    @MainActor
     func login(email: String, password: String) async -> Bool {
         do {
             let payload = LoginRequest(email: email, password: password)
@@ -38,6 +47,7 @@ class AuthViewModel:ObservableObject{
             APIClient.shared.loggedIn = true
             authToken = loginData.accessToken
             userId = loginData.user.id ?? 0
+            loggedIn = true  // Set the @AppStorage property
 
             nav.reset(to: .main)
             return true
@@ -65,6 +75,7 @@ class AuthViewModel:ObservableObject{
             APIClient.shared.loggedIn = true
             authToken = signupData.accessToken
             userId = signupData.user.id ?? 0
+            loggedIn = true  // Set the @AppStorage property
 
             nav.reset(to: .main)
             return true
