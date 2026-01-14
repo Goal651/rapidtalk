@@ -9,97 +9,150 @@ import SwiftUI
 
 struct WelcomeScreen: View {
     @EnvironmentObject var nav: NavigationCoordinator
+    
+    // MARK: - Animation State
+    
     @State private var wave = false
+    @State private var logoAppeared = false
+    @State private var titleAppeared = false
+    @State private var subtitleAppeared = false
+    @State private var buttonsAppeared = false
+    
+    // MARK: - Body
     
     var body: some View {
         ZStack {
-            // Dark mode gradient background
-            LinearGradient(
-                colors: [
-                    Color.black,
-                    Color.blue.opacity(0.4),
-                    Color.black.opacity(0.9)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            // Animated gradient background
+            AnimatedGradientBackground()
             
-            VStack(spacing: 50) {
-                
-                // Title + waving icon
-                VStack(spacing: 12) {
-                    Text("Welcome Back\nTo Vynqtalk")
-                        .font(.system(size: 36, weight: .bold))
-                        .foregroundColor(.white)
-                        .multilineTextAlignment(.center)
-                    
-                    Image(systemName: "hand.wave.fill")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 50, height: 50)
-                        .foregroundColor(.yellow.opacity(0.9))
-                        .rotationEffect(.degrees(wave ? 15 : -15))
-                        .animation(
-                            .easeInOut(duration: 0.6).repeatForever(autoreverses: true),
-                            value: wave
-                        )
-                        .onAppear { wave = true }
-                }
-                .padding(.top, 40)
-                
-                
-                // Login button
-                Button {
-                    nav.push(.login)
-                } label: {
-                    Text("Login")
-                        .font(.title3.bold())
-                        .foregroundColor(.black)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.white)
-                        .cornerRadius(14)
-                        .shadow(color: .white.opacity(0.1), radius: 10, y: 4)
-                        .padding(.horizontal, 40)
-                }
-                
-                
-                // OR Divider (subtle for dark mode)
-                HStack {
-                    line
-                    Text("OR")
-                        .foregroundColor(.white.opacity(0.8))
-                        .fontWeight(.medium)
-                    line
-                }
-                .padding(.horizontal, 40)
-                
-                
-                // Register button
-                Button {
-                    nav.push(.register)
-                } label: {
-                    Text("Register")
-                        .font(.title3.bold())
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.white.opacity(0.08))
-                        .cornerRadius(14)
-                        .shadow(color: .black.opacity(0.7), radius: 10, y: 4)
-                        .padding(.horizontal, 40)
-                }
+            VStack(spacing: AppTheme.Spacing.xxl) {
                 
                 Spacer()
+                
+                // Logo/Icon with entrance animation
+                Image(systemName: "bubble.left.and.bubble.right.fill")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 80, height: 80)
+                    .foregroundColor(AppTheme.AccentColors.primary)
+                    .opacity(logoAppeared ? 1 : 0)
+                    .scaleEffect(logoAppeared ? 1 : 0.5)
+                    .onAppear {
+                        withAnimation(
+                            AppTheme.AnimationCurves.componentAppearance
+                            .delay(0.5)
+                        ) {
+                            logoAppeared = true
+                        }
+                    }
+                
+                // Title and subtitle with entrance animations
+                VStack(spacing: AppTheme.Spacing.m) {
+                    Text("Welcome to VynqTalk")
+                        .font(AppTheme.Typography.largeTitle)
+                        .foregroundColor(AppTheme.TextColors.primary)
+                        .multilineTextAlignment(.center)
+                        .opacity(titleAppeared ? 1 : 0)
+                        .offset(y: titleAppeared ? 0 : 20)
+                        .onAppear {
+                            withAnimation(
+                                AppTheme.AnimationCurves.componentAppearance
+                                .delay(0.7)
+                            ) {
+                                titleAppeared = true
+                            }
+                        }
+                    
+                    Text("Connect with friends")
+                        .font(AppTheme.Typography.title3)
+                        .foregroundColor(AppTheme.TextColors.secondary)
+                        .multilineTextAlignment(.center)
+                        .opacity(subtitleAppeared ? 1 : 0)
+                        .onAppear {
+                            withAnimation(
+                                AppTheme.AnimationCurves.componentAppearance
+                                .delay(0.9)
+                            ) {
+                                subtitleAppeared = true
+                            }
+                        }
+                }
+                
+                // Waving hand icon with continuous animation
+                Image(systemName: "hand.wave.fill")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 60, height: 60)
+                    .foregroundColor(.yellow.opacity(0.9))
+                    .rotationEffect(.degrees(wave ? 15 : -15))
+                    .animation(
+                        .easeInOut(duration: 0.6).repeatForever(autoreverses: true),
+                        value: wave
+                    )
+                    .opacity(subtitleAppeared ? 1 : 0)
+                    .onAppear {
+                        wave = true
+                    }
+                
+                Spacer()
+                
+                // Buttons with entrance animations
+                VStack(spacing: AppTheme.Spacing.l) {
+                    // Primary button - Get Started
+                    CustomButton(
+                        title: "Get Started",
+                        style: .primary,
+                        action: {
+                            nav.push(.register)
+                        }
+                    )
+                    .padding(.horizontal, AppTheme.Spacing.xl)
+                    .opacity(buttonsAppeared ? 1 : 0)
+                    .offset(y: buttonsAppeared ? 0 : 20)
+                    .onAppear {
+                        withAnimation(
+                            AppTheme.AnimationCurves.componentAppearance
+                            .delay(1.1)
+                        ) {
+                            buttonsAppeared = true
+                        }
+                    }
+                    
+                    // OR Divider
+                    HStack {
+                        line
+                        Text("OR")
+                            .font(AppTheme.Typography.callout)
+                            .foregroundColor(AppTheme.TextColors.secondary)
+                            .fontWeight(.medium)
+                        line
+                    }
+                    .padding(.horizontal, AppTheme.Spacing.xl)
+                    .opacity(buttonsAppeared ? 1 : 0)
+                    
+                    // Secondary button - Sign In
+                    CustomButton(
+                        title: "Sign In",
+                        style: .secondary,
+                        action: {
+                            nav.push(.login)
+                        }
+                    )
+                    .padding(.horizontal, AppTheme.Spacing.xl)
+                    .opacity(buttonsAppeared ? 1 : 0)
+                    .offset(y: buttonsAppeared ? 0 : 20)
+                }
+                .padding(.bottom, AppTheme.Spacing.xl)
             }
         }
     }
     
-    // Clean divider line
+    // MARK: - Helper Views
+    
+    /// Clean divider line
     private var line: some View {
         Rectangle()
             .frame(height: 1)
-            .foregroundColor(.white.opacity(0.3))
+            .foregroundColor(AppTheme.TextColors.tertiary)
     }
 }

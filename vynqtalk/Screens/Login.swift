@@ -105,7 +105,7 @@ struct LoginScreen: View {
                     Task{
                         let ok = await authVM.login(email: email, password: password)
                         if ok {
-                            wsM.connect(token: authVM.authToken.trimmingCharacters(in: .whitespacesAndNewlines))
+                            wsM.connect()
                         } else {
                             modalTitle = "Login Failed"
                             modalDescription = "Please check your email/password and try again."
@@ -155,5 +155,11 @@ struct LoginScreen: View {
                 BackButton()
             }
         }
+        .transition(
+            .asymmetric(
+                insertion: .move(edge: .trailing).combined(with: .opacity),
+                removal: .move(edge: .leading).combined(with: .opacity)
+            )
+        )
     }
 }

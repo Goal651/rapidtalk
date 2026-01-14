@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+
 struct ChatScreen: View {
     @EnvironmentObject var authVM: AuthViewModel
     @EnvironmentObject var messageVM: MessageViewModel
@@ -82,11 +83,11 @@ struct ChatScreen: View {
                         .foregroundColor(.white)
                     
                     Button {
-                        wsM.sendChatMessage(
-                            senderId: authVM.userId,
-                            receiverId: userId,
-                            content: messageText
-                        )
+//                        wsM.sendChatMessage(
+//                            senderId: authVM.userId,
+//                            receiverId: userId,
+//                            content: messageText
+//                        )
                         messageText = ""
                     } label: {
                         Image(systemName: "paperplane.fill")
@@ -109,17 +110,17 @@ struct ChatScreen: View {
         .task {
             await messageVM.loadConversation(meId: authVM.userId, otherUserId: userId)
         }
-        .onChange(of: wsM.incomingMessage?.id) { _, _ in
-            guard let m = wsM.incomingMessage else { return }
-            // only append messages that belong to this chat
-            let s = m.sender?.id ?? -1
-            let r = m.receiver?.id ?? -1
-            let me = authVM.userId
-            if (s == me && r == userId) || (s == userId && r == me) {
-                Task { @MainActor in
-                    messageVM.append(m)
-                }
-            }
-        }
+//        .onChange(of: wsM.incomingMessage?.id) { _, _ in
+//            guard let m = wsM.incomingMessage else { return }
+//            // only append messages that belong to this chat
+//            let s = m.sender?.id ?? -1
+//            let r = m.receiver?.id ?? -1
+//            let me = authVM.userId
+//            if (s == me && r == userId) || (s == userId && r == me) {
+//                Task { @MainActor in
+//                    messageVM.append(m)
+//                }
+//            }
+//        }
     }
 }

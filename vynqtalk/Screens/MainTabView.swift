@@ -19,7 +19,7 @@ struct MainTabView: View {
         .tint(.white)
         .task {
             if !wsM.isConnected {
-                wsM.connect(token: authVM.authToken)
+                wsM.connect()
             }
         }
     }
