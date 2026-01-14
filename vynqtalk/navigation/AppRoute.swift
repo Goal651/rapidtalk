@@ -5,7 +5,7 @@ enum AppRoute: Hashable {
     case login
     case register
     case main
-    case chat(userId: Int, name: String)
+    case chat(userId: String, name: String)  // Changed from Int to String
     
     // Route metadata
     var title: String {
@@ -49,7 +49,7 @@ enum AppRoute: Hashable {
 // MARK: - Sheet Presentation
 
 enum AppSheet: Identifiable {
-    case userProfile(userId: Int)
+    case userProfile(userId: String)  // Changed from Int to String
     case imageViewer(url: String)
     case settings
     

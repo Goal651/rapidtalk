@@ -15,7 +15,7 @@ struct ChatScreen: View {
     @State private var messageText: String = ""
     @State private var isSendButtonPressed = false
     @State private var isOtherUserTyping = false // For typing indicator
-    let userId: Int
+    let userId: String  // Changed from Int to String
     let userName: String
     
     var body: some View {
@@ -91,11 +91,14 @@ struct ChatScreen: View {
                             .font(AppTheme.Typography.body)
                         
                         Button {
-    //                        wsM.sendChatMessage(
-    //                            senderId: authVM.userId,
-    //                            receiverId: userId,
-    //                            content: messageText
-    //                        )
+                            // Send message via WebSocket
+                            guard !messageText.isEmpty else { return }
+                            
+                            wsM.sendChatMessage(
+                                receiverId: userId,
+                                content: messageText,
+                                type: .text
+                            )
                             messageText = ""
                         } label: {
                             Image(systemName: "paperplane.fill")
@@ -147,17 +150,17 @@ struct ChatScreen: View {
         .task {
             await messageVM.loadConversation(meId: authVM.userId, otherUserId: userId)
         }
-//        .onChange(of: wsM.incomingMessage?.id) { _, _ in
-//            guard let m = wsM.incomingMessage else { return }
-//            // only append messages that belong to this chat
-//            let s = m.sender?.id ?? -1
-//            let r = m.receiver?.id ?? -1
-//            let me = authVM.userId
-//            if (s == me && r == userId) || (s == userId && r == me) {
-//                Task { @MainActor in
-//                    messageVM.append(m)
-//                }
-//            }
-//        }
+        .onChange(of: wsM.incomingMessage?.id) { _, _ in
+            guard let m = wsM.incomingMessage else { return }
+            // only append messages that belong to this chat
+            let s = m.sender?.id ?? ""
+            let r = m.receiver?.id ?? ""
+            let me = authVM.userId
+            if (s == me && r == userId) || (s == userId && r == me) {
+                Task { @MainActor in
+                    messageVM.append(m)
+                }
+            }
+        }
     }
 }

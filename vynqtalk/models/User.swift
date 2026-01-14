@@ -1,7 +1,7 @@
 import Foundation
 
 class User: Codable, Identifiable {
-    let id: Int?
+    let id: String?  // Changed from Int to String (UUID)
     let name: String?
     let avatar: String?
     let password: String?
@@ -15,7 +15,7 @@ class User: Codable, Identifiable {
     let unreadMessages: [Message]?
     let online: Bool?
 
-    public init(id: Int?, name: String?, avatar: String?, password: String?, email: String?, userRole: UserRole?, status: String?, bio: String?, lastActive: Date?, createdAt: Date?, latestMessage: Message?, unreadMessages: [Message]?, online: Bool?) {
+    public init(id: String?, name: String?, avatar: String?, password: String?, email: String?, userRole: UserRole?, status: String?, bio: String?, lastActive: Date?, createdAt: Date?, latestMessage: Message?, unreadMessages: [Message]?, online: Bool?) {
         self.id = id
         self.name = name
         self.avatar = avatar

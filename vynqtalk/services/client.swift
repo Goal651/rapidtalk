@@ -21,7 +21,17 @@ final class APIClient: ObservableObject {
     
     static let shared = APIClient()
     
-    private let baseURL = "http://10.12.75.116:8080"
+    // Environment configuration
+    #if DEBUG
+    static var environment: APIEnvironment = .development
+    #else
+    static var environment: APIEnvironment = .production
+    #endif
+    
+    private var baseURL: String {
+        Self.environment.baseURL
+    }
+    
     private var logoutListeners: [() -> Void] = []
 
     static let jsonDecoder: JSONDecoder = {
@@ -112,7 +122,7 @@ final class APIClient: ObservableObject {
         body: Data? = nil
     ) async throws -> T {
         guard let url = URL(string: "\(baseURL)\(endpoint)") else {
-            throw URLError(.badURL)
+            throw APIError.invalidResponse
         }
         
         var request = URLRequest(url: url)
@@ -127,24 +137,118 @@ final class APIClient: ObservableObject {
             request.httpBody = body
         }
         
-        let (data, response) = try await URLSession.shared.data(for: request)
+        // Log request
+        logRequest(request)
         
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            // Log response
+            logResponse(data, response)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw APIError.invalidResponse
+            }
         
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw URLError(.badServerResponse)
+            if httpResponse.statusCode == 401 || httpResponse.statusCode == 403 {
+                logout()
+                throw APIError.authenticationRequired
+            }
+            
+            if httpResponse.statusCode >= 500 {
+                throw APIError.serverError(statusCode: httpResponse.statusCode)
+            }
+            
+            if httpResponse.statusCode >= 400 {
+                throw APIError.serverError(statusCode: httpResponse.statusCode)
+            }
+            
+            let decoded = try Self.jsonDecoder.decode(T.self, from: data)
+            return decoded
+            
+        } catch let error as APIError {
+            #if DEBUG
+            print("❌ API Error: \(error.localizedDescription ?? "Unknown error")")
+            #endif
+            throw error
+        } catch let error as URLError {
+            #if DEBUG
+            print("❌ URL Error: \(error.localizedDescription)")
+            #endif
+            throw handleURLError(error)
+        } catch let error as DecodingError {
+            #if DEBUG
+            print("❌ Decoding Error: \(error)")
+            #endif
+            throw APIError.decodingError(error)
+        } catch {
+            #if DEBUG
+            print("❌ Unknown Error: \(error.localizedDescription)")
+            #endif
+            throw APIError.unknown(error)
         }
+    }
     
-        if httpResponse.statusCode == 401 || httpResponse.statusCode == 403 {
-            logout()
-            throw URLError(.userAuthenticationRequired)
+    // MARK: - Logging
+    private func logRequest(_ request: URLRequest) {
+        #if DEBUG
+        print("📤 \(request.httpMethod ?? "GET") \(request.url?.absoluteString ?? "")")
+        if let headers = request.allHTTPHeaderFields {
+            print("📤 Headers: \(headers)")
         }
-        
-        if httpResponse.statusCode >= 500 {
-            throw URLError(.badServerResponse)
+        if let body = request.httpBody,
+           let bodyString = String(data: body, encoding: .utf8) {
+            let sanitized = sanitizeLog(bodyString)
+            print("📤 Body: \(sanitized)")
         }
-        
-        let decoded = try Self.jsonDecoder.decode(T.self, from: data)
-        return decoded
+        #endif
+    }
+    
+    private func logResponse(_ data: Data, _ response: URLResponse?) {
+        #if DEBUG
+        if let httpResponse = response as? HTTPURLResponse {
+            print("📥 Status: \(httpResponse.statusCode)")
+        }
+        if let responseString = String(data: data, encoding: .utf8) {
+            print("📥 Response: \(responseString)")
+        }
+        #endif
+    }
+    
+    private func sanitizeLog(_ string: String) -> String {
+        var sanitized = string
+        // Remove password values
+        sanitized = sanitized.replacingOccurrences(
+            of: #""password"\s*:\s*"[^"]*""#,
+            with: #""password":"***""#,
+            options: .regularExpression
+        )
+        // Remove token values
+        sanitized = sanitized.replacingOccurrences(
+            of: #""token"\s*:\s*"[^"]*""#,
+            with: #""token":"***""#,
+            options: .regularExpression
+        )
+        sanitized = sanitized.replacingOccurrences(
+            of: #""accessToken"\s*:\s*"[^"]*""#,
+            with: #""accessToken":"***""#,
+            options: .regularExpression
+        )
+        return sanitized
+    }
+    
+    // MARK: - Error Handling
+    private func handleURLError(_ error: URLError) -> APIError {
+        switch error.code {
+        case .notConnectedToInternet, .networkConnectionLost:
+            return .noConnection
+        case .timedOut:
+            return .timeout
+        case .userAuthenticationRequired:
+            return .authenticationRequired
+        default:
+            return .networkError
+        }
     }
     
     // MARK: - Public CRUD Methods

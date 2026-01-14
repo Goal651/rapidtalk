@@ -14,7 +14,7 @@ class AuthViewModel:ObservableObject{
     
     @AppStorage("loggedIn") var loggedIn: Bool = false
     @AppStorage("auth_token") var authToken: String = ""
-    @AppStorage("user_id") var userId: Int = 0
+    @AppStorage("user_id") var userId: String = ""  // Changed from Int to String
 
     init(nav: NavigationCoordinator) {
         self.nav = nav
@@ -25,7 +25,7 @@ class AuthViewModel:ObservableObject{
         APIClient.shared.logout()
         loggedIn = false
         authToken = ""
-        userId = 0
+        userId = ""
         nav.popToRoot()
     }
     
@@ -46,7 +46,7 @@ class AuthViewModel:ObservableObject{
             APIClient.shared.saveAuthToken(loginData.accessToken)
             APIClient.shared.loggedIn = true
             authToken = loginData.accessToken
-            userId = loginData.user.id ?? 0
+            userId = loginData.user.id ?? ""
             loggedIn = true  // Set the @AppStorage property
 
             nav.reset(to: .main)
@@ -74,7 +74,7 @@ class AuthViewModel:ObservableObject{
             APIClient.shared.saveAuthToken(signupData.accessToken)
             APIClient.shared.loggedIn = true
             authToken = signupData.accessToken
-            userId = signupData.user.id ?? 0
+            userId = signupData.user.id ?? ""
             loggedIn = true  // Set the @AppStorage property
 
             nav.reset(to: .main)

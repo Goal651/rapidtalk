@@ -13,7 +13,7 @@ struct HomeScreen: View {
     @EnvironmentObject var nav: NavigationCoordinator
     
     @State private var searchText: String = ""
-    @State private var tappedUserId: Int? = nil
+    @State private var tappedUserId: String? = nil  // Changed from Int? to String?
     
     var filteredUsers: [User] {
         if searchText.isEmpty {

@@ -32,8 +32,8 @@ final class MessageViewModel: ObservableObject {
     }
 
     @MainActor
-    func loadConversation(meId: Int, otherUserId: Int) async {
-        guard meId > 0, otherUserId > 0 else {
+    func loadConversation(meId: String, otherUserId: String) async {
+        guard !meId.isEmpty, !otherUserId.isEmpty else {
             errorMessage = "Invalid user ids"
             messages = []
             return
@@ -44,8 +44,10 @@ final class MessageViewModel: ObservableObject {
         defer { isLoading = false }
 
         do {
+            // ✅ Fixed: Use correct endpoint path
+            let endpoint = APIEndpoint.conversation(user1: meId, user2: otherUserId)
             let response: APIResponse<[Message]> =
-                try await APIClient.shared.get("/messages/all/\(meId)/\(otherUserId)")
+                try await APIClient.shared.get(endpoint.path)
             guard response.success, let data = response.data else {
                 errorMessage = response.message
                 messages = []

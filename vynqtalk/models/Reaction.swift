@@ -2,5 +2,5 @@ import Foundation
 
 struct Reaction: Codable {
     let emoji: String
-    let userId: Int
+    let userId: String  // Changed from Int to String (UUID)
 }
