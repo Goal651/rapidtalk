@@ -35,23 +35,23 @@ struct MainTabView: View {
             // Customize tab bar appearance
             let appearance = UITabBarAppearance()
             
-            // Background with blur effect
+            // Background with blur effect - Deep black
             appearance.configureWithTransparentBackground()
             appearance.backgroundColor = UIColor(
-                red: 0.08, green: 0.05, blue: 0.15, alpha: 0.95
+                red: 0.03, green: 0.04, blue: 0.08, alpha: 0.95
             )
             
-            // Add subtle top border
+            // Add subtle blue top border
             appearance.shadowColor = UIColor(
-                red: 0.55, green: 0.45, blue: 1.0, alpha: 0.2
+                red: 0.20, green: 0.60, blue: 1.0, alpha: 0.2
             )
             
-            // Selected item color (vibrant purple)
+            // Selected item color (electric blue)
             appearance.stackedLayoutAppearance.selected.iconColor = UIColor(
-                red: 0.55, green: 0.45, blue: 1.0, alpha: 1.0
+                red: 0.20, green: 0.60, blue: 1.0, alpha: 1.0
             )
             appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
-                .foregroundColor: UIColor(red: 0.55, green: 0.45, blue: 1.0, alpha: 1.0),
+                .foregroundColor: UIColor(red: 0.20, green: 0.60, blue: 1.0, alpha: 1.0),
                 .font: UIFont.systemFont(ofSize: 11, weight: .semibold)
             ]
             

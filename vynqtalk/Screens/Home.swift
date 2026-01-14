@@ -163,11 +163,11 @@ struct ChatListItem: View {
                 // Online indicator
                 if user.online == true {
                     Circle()
-                        .fill(AppTheme.AccentColors.success)
+                        .fill(AppTheme.AccentColors.online)
                         .frame(width: 12, height: 12)
                         .overlay(
                             Circle()
-                                .stroke(AppTheme.GradientColors.deepNavyBlack, lineWidth: 2)
+                                .stroke(AppTheme.GradientColors.deepBlack, lineWidth: 2)
                         )
                         .offset(x: 2, y: 2)
                 }

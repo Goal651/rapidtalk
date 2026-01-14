@@ -10,26 +10,29 @@ import SwiftUI
 
 struct AppTheme {
     
-    // MARK: - Color Palette (Midnight Purple Theme)
+    // MARK: - Color Palette (Tech Professional Theme)
     
     /// Primary gradient colors for backgrounds
     struct GradientColors {
-        static let deepPurple = Color(red: 0.08, green: 0.05, blue: 0.15)      // #140D26
-        static let richPurple = Color(red: 0.12, green: 0.08, blue: 0.25)      // #1F1440
-        static let deepBlue = Color(red: 0.10, green: 0.12, blue: 0.30)        // #1A1F4D
+        static let deepBlack = Color(red: 0.03, green: 0.04, blue: 0.08)      // #080A14
+        static let richBlack = Color(red: 0.06, green: 0.08, blue: 0.12)      // #0F141F
+        static let darkGray = Color(red: 0.10, green: 0.12, blue: 0.16)       // #1A1F29
         
         // Legacy names for compatibility
-        static let deepNavyBlack = deepPurple
-        static let midnightBlue = richPurple
-        static let softBlue = deepBlue
+        static let deepPurple = deepBlack
+        static let richPurple = richBlack
+        static let deepBlue = darkGray
+        static let deepNavyBlack = deepBlack
+        static let midnightBlue = richBlack
+        static let softBlue = darkGray
     }
     
     /// Primary gradient configuration
     static let primaryGradient = LinearGradient(
         colors: [
-            GradientColors.deepPurple,
-            GradientColors.richPurple,
-            GradientColors.deepBlue
+            GradientColors.deepBlack,
+            GradientColors.richBlack,
+            GradientColors.darkGray
         ],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
@@ -37,9 +40,10 @@ struct AppTheme {
     
     /// Accent colors for interactive elements and states
     struct AccentColors {
-        static let primary = Color(red: 0.55, green: 0.45, blue: 1.0)          // #8C73FF (Vibrant Purple)
-        static let secondary = Color(red: 0.40, green: 0.70, blue: 1.0)        // #66B3FF (Sky Blue)
-        static let success = Color(red: 0.30, green: 0.85, blue: 0.60)         // #4DD99A (Mint Green)
+        static let primary = Color(red: 0.20, green: 0.60, blue: 1.0)          // #3399FF (Electric Blue)
+        static let secondary = Color(red: 0.25, green: 0.70, blue: 1.0)        // #40B3FF (Bright Blue)
+        static let success = Color(red: 0.25, green: 0.85, blue: 0.65)         // #40D9A6 (Mint Green)
+        static let online = Color(red: 0.30, green: 0.90, blue: 0.70)          // #4DE6B3 (Bright Green)
         static let warning = Color(red: 1.0, green: 0.70, blue: 0.30)          // #FFB34D (Warm Orange)
         static let error = Color(red: 1.0, green: 0.40, blue: 0.50)            // #FF6680 (Coral Red)
     }
@@ -62,12 +66,12 @@ struct AppTheme {
     
     /// Message bubble colors
     struct MessageColors {
-        // Sent messages - Purple gradient
-        static let sentStart = Color(red: 0.55, green: 0.45, blue: 1.0)        // #8C73FF
-        static let sentEnd = Color(red: 0.45, green: 0.35, blue: 0.90)         // #7359E6
+        // Sent messages - Electric Blue gradient
+        static let sentStart = Color(red: 0.20, green: 0.60, blue: 1.0)        // #3399FF
+        static let sentEnd = Color(red: 0.15, green: 0.50, blue: 0.90)         // #2680E6
         
         // Received messages - Dark elevated surface
-        static let received = Color(red: 0.15, green: 0.12, blue: 0.25)        // #26203F
+        static let received = Color(red: 0.10, green: 0.12, blue: 0.16)        // #1A1F29
     }
     
     // MARK: - Typography
