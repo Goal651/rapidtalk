@@ -8,29 +8,59 @@
 import SwiftUI
 
 
+enum UserFilterType: String, CaseIterable {
+    case all = "All"
+    case online = "Online"
+    case offline = "Offline"
+    case recent = "Recent"
+    
+    var id: String { rawValue }
+}
+
 struct HomeScreen: View {
     @EnvironmentObject var userVM: UserViewModel
     @EnvironmentObject var nav: NavigationCoordinator
     
     @State private var searchText: String = ""
-    @State private var tappedUserId: String? = nil  // Changed from Int? to String?
+    @State private var selectedFilter: UserFilterType = .all
+    @State private var tappedUserId: String? = nil
     
     var filteredUsers: [User] {
-        if searchText.isEmpty {
-            return userVM.users
+        var users = userVM.users
+        
+        // Apply search
+        if !searchText.isEmpty {
+            users = users.filter { user in
+                let name = user.name?.lowercased() ?? ""
+                let email = user.email?.lowercased() ?? ""
+                let search = searchText.lowercased()
+                return name.contains(search) || email.contains(search)
+            }
         }
-        return userVM.users.filter { user in
-            let name = user.name?.lowercased() ?? ""
-            let email = user.email?.lowercased() ?? ""
-            let search = searchText.lowercased()
-            return name.contains(search) || email.contains(search)
+        
+        // Apply filter
+        switch selectedFilter {
+        case .all:
+            break
+        case .online:
+            users = users.filter { $0.online == true }
+        case .offline:
+            users = users.filter { $0.online != true }
+        case .recent:
+            users = users.sorted { (u1, u2) in
+                guard let d1 = u1.lastActive, let d2 = u2.lastActive else { return false }
+                return d1 > d2
+            }
         }
+        
+        return users
     }
     
     var body: some View {
         GeometryReader { geometry in
             homeContent(geometry: geometry)
         }
+        .ignoresSafeArea(edges: .bottom)
         .navigationBarBackButtonHidden()
         .task {
             await userVM.loadUsers()
@@ -46,9 +76,11 @@ struct HomeScreen: View {
         
         ZStack {
             AnimatedGradientBackground()
+                .ignoresSafeArea()
             
             VStack(alignment: .leading, spacing: 0) {
                 headerSection(spacing: spacing, isLandscape: isLandscape)
+                filterSection(spacing: spacing)
                 chatListSection(spacing: spacing, isLandscape: isLandscape)
                 Spacer(minLength: 0)
             }
@@ -103,9 +135,30 @@ struct HomeScreen: View {
     }
     
     @ViewBuilder
+    private func filterSection(spacing: ResponsiveSpacing) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: AppTheme.Spacing.s) {
+                ForEach(UserFilterType.allCases, id: \.id) { filter in
+                    FilterChip(
+                        title: filter.rawValue,
+                        isSelected: selectedFilter == filter,
+                        action: {
+                            withAnimation(AppTheme.AnimationCurves.buttonPress) {
+                                selectedFilter = filter
+                            }
+                        }
+                    )
+                }
+            }
+            .padding(.horizontal, spacing.horizontalPadding)
+        }
+        .padding(.bottom, AppTheme.Spacing.m)
+    }
+    
+    @ViewBuilder
     private func chatListSection(spacing: ResponsiveSpacing, isLandscape: Bool) -> some View {
         ScrollView {
-            VStack(spacing: isLandscape ? AppTheme.Spacing.s : AppTheme.Spacing.m) {
+            VStack(spacing: AppTheme.Spacing.xs) {
                 if userVM.isLoading {
                     LoadingView(message: "Loading chats...", style: .spinner)
                         .padding(.top, AppTheme.Spacing.xl)
@@ -115,13 +168,13 @@ struct HomeScreen: View {
                         .foregroundColor(AppTheme.AccentColors.error)
                         .padding(.top, AppTheme.Spacing.xl)
                 } else if filteredUsers.isEmpty {
-                    EmptyStateView()
+                    EmptyStateView(filterType: selectedFilter)
                 } else {
                     chatListItems(isLandscape: isLandscape)
                 }
             }
             .padding(.horizontal, spacing.horizontalPadding)
-            .padding(.top, AppTheme.Spacing.s)
+            .padding(.top, AppTheme.Spacing.xs)
             .padding(.bottom, spacing.bottomPadding)
         }
     }
@@ -155,7 +208,7 @@ struct ChatListItem: View {
     var isCompact: Bool = false
     
     var body: some View {
-        HStack(spacing: AppTheme.Spacing.m) {
+        HStack(spacing: AppTheme.Spacing.s) {
             // Avatar with online indicator
             ZStack(alignment: .bottomTrailing) {
                 avatar
@@ -164,12 +217,12 @@ struct ChatListItem: View {
                 if user.online == true {
                     Circle()
                         .fill(AppTheme.AccentColors.online)
-                        .frame(width: 12, height: 12)
+                        .frame(width: 10, height: 10)
                         .overlay(
                             Circle()
                                 .stroke(AppTheme.GradientColors.deepBlack, lineWidth: 2)
                         )
-                        .offset(x: 2, y: 2)
+                        .offset(x: 1, y: 1)
                 }
             }
             
@@ -177,7 +230,7 @@ struct ChatListItem: View {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
                 HStack {
                     Text(user.name ?? "Unknown User")
-                        .font(isCompact ? AppTheme.Typography.body : AppTheme.Typography.headline)
+                        .font(isCompact ? AppTheme.Typography.subheadline : AppTheme.Typography.headline)
                         .foregroundColor(AppTheme.TextColors.primary)
                     
                     Spacer()
@@ -191,7 +244,7 @@ struct ChatListItem: View {
                 HStack {
                     // Last message preview (using bio as placeholder)
                     Text(user.bio ?? user.email ?? "Start a conversation")
-                        .font(isCompact ? AppTheme.Typography.caption : AppTheme.Typography.subheadline)
+                        .font(AppTheme.Typography.caption)
                         .foregroundColor(AppTheme.TextColors.secondary)
                         .lineLimit(1)
                     
@@ -203,10 +256,10 @@ struct ChatListItem: View {
                 }
             }
         }
-        .padding(.horizontal, AppTheme.Spacing.m)
-        .padding(.vertical, isCompact ? AppTheme.Spacing.s : AppTheme.Spacing.m)
+        .padding(.horizontal, AppTheme.Spacing.s)
+        .padding(.vertical, AppTheme.Spacing.s)
         .background(AppTheme.SurfaceColors.surfaceLight)
-        .cornerRadius(AppTheme.CornerRadius.l)
+        .cornerRadius(AppTheme.CornerRadius.m)
         .scaleEffect(isPressed ? 0.98 : 1.0)
         .animation(AppTheme.AnimationCurves.buttonPress, value: isPressed)
     }
@@ -220,18 +273,18 @@ struct ChatListItem: View {
                 switch phase {
                 case .empty:
                     ProgressView()
-                        .frame(width: 56, height: 56)
+                        .frame(width: 48, height: 48)
                 case .success(let image):
                     image
                         .resizable()
                         .scaledToFill()
-                        .frame(width: 56, height: 56)
+                        .frame(width: 48, height: 48)
                         .clipShape(Circle())
                 case .failure:
                     Image(systemName: "person.circle.fill")
                         .resizable()
                         .scaledToFit()
-                        .frame(width: 56, height: 56)
+                        .frame(width: 48, height: 48)
                         .foregroundColor(AppTheme.TextColors.secondary)
                 @unknown default:
                     EmptyView()
@@ -239,18 +292,40 @@ struct ChatListItem: View {
             }
             .overlay(
                 Circle()
-                    .stroke(AppTheme.TextColors.tertiary, lineWidth: 2)
+                    .stroke(AppTheme.TextColors.tertiary, lineWidth: 1.5)
             )
         } else {
             Image(systemName: "person.circle.fill")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 56, height: 56)
+                .frame(width: 48, height: 48)
                 .foregroundColor(AppTheme.TextColors.secondary)
                 .overlay(
                     Circle()
-                        .stroke(AppTheme.TextColors.tertiary, lineWidth: 2)
+                        .stroke(AppTheme.TextColors.tertiary, lineWidth: 1.5)
                 )
+        }
+    }
+}
+
+// MARK: - Filter Chip Component
+
+struct FilterChip: View {
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(AppTheme.Typography.subheadline)
+                .foregroundColor(isSelected ? AppTheme.TextColors.primary : AppTheme.TextColors.secondary)
+                .padding(.horizontal, AppTheme.Spacing.m)
+                .padding(.vertical, AppTheme.Spacing.s)
+                .background(
+                    isSelected ? AppTheme.AccentColors.primary : AppTheme.SurfaceColors.surfaceLight
+                )
+                .cornerRadius(AppTheme.CornerRadius.m)
         }
     }
 }
@@ -258,7 +333,30 @@ struct ChatListItem: View {
 // MARK: - Empty State View
 
 struct EmptyStateView: View {
+    let filterType: UserFilterType
     @State private var appeared: Bool = false
+    
+    private var message: String {
+        switch filterType {
+        case .all:
+            return "No conversations yet"
+        case .online:
+            return "No users online"
+        case .offline:
+            return "No offline users"
+        case .recent:
+            return "No recent activity"
+        }
+    }
+    
+    private var subtitle: String {
+        switch filterType {
+        case .all:
+            return "Start chatting with someone!"
+        default:
+            return "Try adjusting your filters"
+        }
+    }
     
     var body: some View {
         VStack(spacing: AppTheme.Spacing.l) {
@@ -269,11 +367,11 @@ struct EmptyStateView: View {
                 .foregroundColor(AppTheme.TextColors.tertiary)
             
             VStack(spacing: AppTheme.Spacing.s) {
-                Text("No conversations yet")
+                Text(message)
                     .font(AppTheme.Typography.title3)
                     .foregroundColor(AppTheme.TextColors.primary)
                 
-                Text("Start chatting with someone!")
+                Text(subtitle)
                     .font(AppTheme.Typography.body)
                     .foregroundColor(AppTheme.TextColors.secondary)
             }
