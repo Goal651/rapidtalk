@@ -12,13 +12,43 @@ final class ProfileViewModel: ObservableObject {
         defer { isLoading = false }
 
         do {
-            // The API returns User directly, not wrapped in APIResponse
+            // Try to load user data from the API
             let userData: User = try await APIClient.shared.makeDirectRequest("/user")
             user = userData
+            print("✅ Profile loaded successfully: \(userData.name ?? "No name")")
         } catch {
+            print("❌ Profile loading error: \(error)")
             errorMessage = error.localizedDescription
             user = nil
+            
+            // If API fails, create a fallback user with stored data
+            createFallbackUser()
         }
+    }
+    
+    private func createFallbackUser() {
+        // Create a fallback user with stored auth data
+        let storedUserId = UserDefaults.standard.string(forKey: "user_id") ?? "unknown"
+        let storedEmail = UserDefaults.standard.string(forKey: "user_email") ?? "user@example.com"
+        let storedName = UserDefaults.standard.string(forKey: "user_name") ?? "User"
+        
+        user = User(
+            id: storedUserId,
+            name: storedName,
+            avatar: nil,
+            password: nil,
+            email: storedEmail,
+            userRole: .user,
+            status: "Available",
+            bio: "VynqTalk user",
+            lastActive: Date(),
+            createdAt: Date(),
+            latestMessage: nil,
+            unreadMessages: nil,
+            online: true
+        )
+        
+        print("📝 Created fallback user: \(storedName)")
     }
 }
 

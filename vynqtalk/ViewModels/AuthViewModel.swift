@@ -26,6 +26,12 @@ class AuthViewModel:ObservableObject{
         loggedIn = false
         authToken = ""
         userId = ""
+        
+        // Clear stored user data
+        UserDefaults.standard.removeObject(forKey: "user_name")
+        UserDefaults.standard.removeObject(forKey: "user_email")
+        UserDefaults.standard.removeObject(forKey: "user_id")
+        
         nav.popToRoot()
     }
     
@@ -47,6 +53,12 @@ class AuthViewModel:ObservableObject{
             APIClient.shared.loggedIn = true
             authToken = loginData.accessToken
             userId = loginData.user.id ?? ""
+            
+            // Store user data for profile
+            UserDefaults.standard.set(loginData.user.name, forKey: "user_name")
+            UserDefaults.standard.set(loginData.user.email, forKey: "user_email")
+            UserDefaults.standard.set(loginData.user.id, forKey: "user_id")
+            
             loggedIn = true  // Set the @AppStorage property
 
             nav.reset(to: .main)
@@ -75,6 +87,12 @@ class AuthViewModel:ObservableObject{
             APIClient.shared.loggedIn = true
             authToken = signupData.accessToken
             userId = signupData.user.id ?? ""
+            
+            // Store user data for profile
+            UserDefaults.standard.set(signupData.user.name, forKey: "user_name")
+            UserDefaults.standard.set(signupData.user.email, forKey: "user_email")
+            UserDefaults.standard.set(signupData.user.id, forKey: "user_id")
+            
             loggedIn = true  // Set the @AppStorage property
 
             nav.reset(to: .main)
