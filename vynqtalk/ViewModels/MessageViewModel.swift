@@ -30,6 +30,13 @@ final class MessageViewModel: ObservableObject {
         }
         messages.append(message)
     }
+    
+    @MainActor
+    func updateMessage(_ updatedMessage: Message) {
+        if let index = messages.firstIndex(where: { $0.id == updatedMessage.id }) {
+            messages[index] = updatedMessage
+        }
+    }
 
     @MainActor
     func loadConversation(meId: String, otherUserId: String) async {

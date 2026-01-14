@@ -10,6 +10,7 @@ import SwiftUI
 struct RepliedMessageView: View {
     let repliedMessage: Message
     let isMe: Bool
+    let currentUserId: String  // To check if replied message is from current user
     
     var body: some View {
         HStack(spacing: 8) {
@@ -19,8 +20,8 @@ struct RepliedMessageView: View {
                 .frame(width: 2)
             
             VStack(alignment: .leading, spacing: 2) {
-                // Show sender name (or "You" if it's the current user's message)
-                Text(repliedMessage.sender?.name ?? "User")
+                // Show "You" if replied message is from current user, otherwise show sender name
+                Text(repliedSenderName)
                     .font(.system(size: 12, weight: .semibold, design: .rounded))
                     .foregroundColor(isMe ? .white.opacity(0.9) : AppTheme.AccentColors.primary)
                 
@@ -37,6 +38,15 @@ struct RepliedMessageView: View {
             RoundedRectangle(cornerRadius: 8)
                 .fill(isMe ? Color.white.opacity(0.15) : Color.black.opacity(0.1))
         )
+    }
+    
+    private var repliedSenderName: String {
+        // Check if the replied message is from the current user
+        if repliedMessage.sender?.id == currentUserId {
+            return "You"
+        }
+        // Otherwise show the sender's name
+        return repliedMessage.sender?.name ?? "User"
     }
     
     private var previewText: String {

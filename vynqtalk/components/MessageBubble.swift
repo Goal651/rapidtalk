@@ -133,7 +133,7 @@ struct MessageBubble: View {
         VStack(alignment: .leading, spacing: 0) {
             // Show replied message if exists and has valid content
             if hasValidReply, let repliedMsg = message.replyTo {
-                RepliedMessageView(repliedMessage: repliedMsg, isMe: isMe)
+                RepliedMessageView(repliedMessage: repliedMsg, isMe: isMe, currentUserId: authVM.userId)
                     .padding(.bottom, 8)
             }
             
@@ -160,7 +160,7 @@ struct MessageBubble: View {
             VStack(alignment: .leading, spacing: 0) {
                 // Show replied message if exists and has valid content
                 if hasValidReply, let repliedMsg = message.replyTo {
-                    RepliedMessageView(repliedMessage: repliedMsg, isMe: isMe)
+                    RepliedMessageView(repliedMessage: repliedMsg, isMe: isMe, currentUserId: authVM.userId)
                         .padding(8)
                 }
                 
@@ -214,7 +214,7 @@ struct MessageBubble: View {
         VStack(alignment: .leading, spacing: 0) {
             // Show replied message if exists and has valid content
             if hasValidReply, let repliedMsg = message.replyTo {
-                RepliedMessageView(repliedMessage: repliedMsg, isMe: isMe)
+                RepliedMessageView(repliedMessage: repliedMsg, isMe: isMe, currentUserId: authVM.userId)
                     .padding(8)
             }
             
@@ -241,7 +241,7 @@ struct MessageBubble: View {
         VStack(alignment: .leading, spacing: 0) {
             // Show replied message if exists and has valid content
             if hasValidReply, let repliedMsg = message.replyTo {
-                RepliedMessageView(repliedMessage: repliedMsg, isMe: isMe)
+                RepliedMessageView(repliedMessage: repliedMsg, isMe: isMe, currentUserId: authVM.userId)
                     .padding(.bottom, 8)
             }
             

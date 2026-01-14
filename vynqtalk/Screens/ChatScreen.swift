@@ -70,6 +70,48 @@ struct ChatScreen: View {
     }
     
     var body: some View {
+        mainContent
+            .navigationBarBackButtonHidden()
+            .toolbar(.hidden, for: .tabBar)
+            .onAppear {
+                userOnlineStatus = wsM.isUserOnline(userId)
+                if let cachedLastActive = wsM.getLastActive(for: userId) {
+                    userLastActive = cachedLastActive
+                }
+            }
+            .task {
+                await messageVM.loadConversation(meId: authVM.userId, otherUserId: userId)
+            }
+            .onChange(of: wsM.incomingMessage?.id) { _, _ in
+                handleIncomingMessage()
+            }
+            .onChange(of: wsM.onlineUserIds) { _, _ in
+                handleOnlineUsersChange()
+            }
+            .onChange(of: wsM.userStatusUpdate?.userId) { _, _ in
+                handleUserStatusUpdate()
+            }
+            .onChange(of: wsM.typingUsers[userId]) { _, isTyping in
+                isOtherUserTyping = isTyping == true
+            }
+            .onChange(of: messageText) { oldValue, newValue in
+                handleTypingChange(oldValue: oldValue, newValue: newValue)
+            }
+            .sheet(isPresented: $showUserDetails) {
+                userDetailsSheet
+            }
+            .sheet(isPresented: $showMediaPicker) {
+                mediaPickerSheet
+            }
+            .onChange(of: selectedMedia) { _, newMedia in
+                handleMediaSelection(newMedia)
+            }
+            .onChange(of: wsM.reactionUpdate?.id) { _, _ in
+                handleReactionUpdate()
+            }
+    }
+    
+    private var mainContent: some View {
         GeometryReader { geometry in
             let spacing = ResponsiveSpacing(screenWidth: geometry.size.width)
             
@@ -86,97 +128,90 @@ struct ChatScreen: View {
                 .frame(width: geometry.size.width)
             }
         }
-        .navigationBarBackButtonHidden()
-        .toolbar(.hidden, for: .tabBar)
-        .onAppear {
-            userOnlineStatus = wsM.isUserOnline(userId)
-            if let cachedLastActive = wsM.getLastActive(for: userId) {
-                userLastActive = cachedLastActive
+    }
+    
+    // MARK: - Event Handlers
+    
+    private func handleIncomingMessage() {
+        guard let m = wsM.incomingMessage else { return }
+        let s = m.sender?.id ?? ""
+        let r = m.receiver?.id ?? ""
+        let me = authVM.userId
+        if (s == me && r == userId) || (s == userId && r == me) {
+            Task { @MainActor in
+                messageVM.append(m)
             }
         }
-        .task {
-            await messageVM.loadConversation(meId: authVM.userId, otherUserId: userId)
+    }
+    
+    private func handleOnlineUsersChange() {
+        let wasOnline = userOnlineStatus
+        userOnlineStatus = wsM.isUserOnline(userId)
+        
+        if wasOnline && !userOnlineStatus {
+            userLastActive = Date()
+            wsM.updateLastActive(for: userId, date: Date())
         }
-        .onChange(of: wsM.incomingMessage?.id) { _, _ in
-            guard let m = wsM.incomingMessage else { return }
-            let s = m.sender?.id ?? ""
-            let r = m.receiver?.id ?? ""
-            let me = authVM.userId
-            if (s == me && r == userId) || (s == userId && r == me) {
-                Task { @MainActor in
-                    messageVM.append(m)
-                }
+    }
+    
+    private func handleUserStatusUpdate() {
+        if let status = wsM.userStatusUpdate, status.userId == userId {
+            userOnlineStatus = status.online
+            if let lastActive = status.lastActive {
+                userLastActive = lastActive
             }
         }
-        .onChange(of: wsM.onlineUserIds) { _, _ in
-            let wasOnline = userOnlineStatus
-            userOnlineStatus = wsM.isUserOnline(userId)
+    }
+    
+    private func handleMediaSelection(_ newMedia: MediaItem?) {
+        if let media = newMedia {
+            uploadAndSendMedia(media)
+        }
+    }
+    
+    private func handleReactionUpdate() {
+        guard let reaction = wsM.reactionUpdate else { return }
+        
+        // Find the message and update its reactions
+        if let message = messageVM.messages.first(where: { $0.id == reaction.messageId }) {
+            var updatedReactions = message.reactions ?? []
             
-            if wasOnline && !userOnlineStatus {
-                userLastActive = Date()
-                wsM.updateLastActive(for: userId, date: Date())
-            }
-        }
-        .onChange(of: wsM.userStatusUpdate?.userId) { _, _ in
-            if let status = wsM.userStatusUpdate, status.userId == userId {
-                userOnlineStatus = status.online
-                if let lastActive = status.lastActive {
-                    userLastActive = lastActive
-                }
-            }
-        }
-        .onChange(of: wsM.typingUsers[userId]) { _, isTyping in
-            isOtherUserTyping = isTyping == true
-        }
-        .onChange(of: messageText) { oldValue, newValue in
-            handleTypingChange(oldValue: oldValue, newValue: newValue)
-        }
-        .sheet(isPresented: $showUserDetails) {
-            UserDetailsSheet(
-                userName: userName,
-                userAvatar: userAvatar,
-                userId: userId,
-                isOnline: userOnlineStatus,
-                lastActive: userLastActive
+            // Add the new reaction
+            let newReaction = Reaction(emoji: reaction.emoji, userId: reaction.userId)
+            updatedReactions.append(newReaction)
+            
+            // Update the message with new reactions
+            let updatedMessage = Message(
+                id: message.id,
+                content: message.content,
+                type: message.type,
+                sender: message.sender,
+                receiver: message.receiver,
+                timestamp: message.timestamp,
+                fileName: message.fileName,
+                edited: message.edited,
+                reactions: updatedReactions,
+                replyTo: message.replyTo
             )
-        }
-        .sheet(isPresented: $showMediaPicker) {
-            MediaPicker(selectedMedia: $selectedMedia)
-        }
-        .onChange(of: selectedMedia) { _, newMedia in
-            if let media = newMedia {
-                uploadAndSendMedia(media)
-            }
-        }
-        .onChange(of: wsM.reactionUpdate?.id) { _, _ in
-            guard let reaction = wsM.reactionUpdate else { return }
             
-            // Find the message and update its reactions
-            if let messageIndex = messageVM.messages.firstIndex(where: { $0.id == reaction.messageId }) {
-                let message = messageVM.messages[messageIndex]
-                var updatedReactions = message.reactions ?? []
-                
-                // Add the new reaction
-                let newReaction = Reaction(emoji: reaction.emoji, userId: reaction.userId)
-                updatedReactions.append(newReaction)
-                
-                // Update the message with new reactions
-                let updatedMessage = Message(
-                    id: message.id,
-                    content: message.content,
-                    type: message.type,
-                    sender: message.sender,
-                    receiver: message.receiver,
-                    timestamp: message.timestamp,
-                    fileName: message.fileName,
-                    edited: message.edited,
-                    reactions: updatedReactions,
-                    replyTo: message.replyTo
-                )
-                
-                messageVM.messages[messageIndex] = updatedMessage
+            Task { @MainActor in
+                messageVM.updateMessage(updatedMessage)
             }
         }
+    }
+    
+    private var userDetailsSheet: some View {
+        UserDetailsSheet(
+            userName: userName,
+            userAvatar: userAvatar,
+            userId: userId,
+            isOnline: userOnlineStatus,
+            lastActive: userLastActive
+        )
+    }
+    
+    private var mediaPickerSheet: some View {
+        MediaPicker(selectedMedia: $selectedMedia)
     }
     
     // MARK: - Header
