@@ -14,15 +14,20 @@ struct TypingIndicator: View {
     var body: some View {
         HStack(alignment: .bottom, spacing: AppTheme.Spacing.s) {
             // Typing indicator bubble
-            HStack(spacing: AppTheme.Spacing.xs) {
+            HStack(spacing: 6) {
                 ForEach(0..<3) { index in
                     Circle()
                         .fill(AppTheme.TextColors.secondary)
                         .frame(width: 8, height: 8)
                         .offset(y: dotOffset(for: index))
+                        .animation(
+                            .easeInOut(duration: 0.6)
+                                .repeatForever(autoreverses: true)
+                                .delay(Double(index) * 0.2),
+                            value: animationPhase
+                        )
                 }
             }
-            .drawingGroup() // Optimize repeated dot animation
             .padding(.horizontal, AppTheme.Spacing.m)
             .padding(.vertical, AppTheme.Spacing.m)
             .background(AppTheme.SurfaceColors.surfaceMedium)
@@ -40,26 +45,13 @@ struct TypingIndicator: View {
             }
             
             // Start continuous dot animation
-            withAnimation(
-                .easeInOut(duration: 1.2)
-                .repeatForever(autoreverses: false)
-            ) {
-                animationPhase = 1
-            }
+            animationPhase = 1
         }
     }
     
     /// Calculate the vertical offset for each dot based on animation phase
     private func dotOffset(for index: Int) -> CGFloat {
-        let delay = Double(index) * 0.2
-        let phase = (animationPhase + delay).truncatingRemainder(dividingBy: 1.0)
-        
-        // Create a bounce effect using sine wave
-        if phase < 0.5 {
-            return -sin(phase * 2 * .pi) * 6
-        } else {
-            return 0
-        }
+        return animationPhase == 1 ? -6 : 0
     }
 }
 

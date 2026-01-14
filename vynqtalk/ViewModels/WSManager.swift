@@ -164,6 +164,7 @@ final class WebSocketManager: ObservableObject {
     @Published var userStatusUpdate: UserStatus?
     @Published var onlineUserIds: Set<String> = [] // Array of currently online user IDs
     @Published var typingUsers: [String: Bool] = [:] // userId: isTyping
+    @Published var userLastActiveCache: [String: Date] = [:] // Cache last active times
     
     private var reconnectAttempts = 0
     private let maxReconnectAttempts = 5
@@ -177,6 +178,16 @@ final class WebSocketManager: ObservableObject {
     // Helper to check if a user is typing
     func isUserTyping(_ userId: String) -> Bool {
         return typingUsers[userId] == true
+    }
+    
+    // Helper to get last active time (from cache or provided)
+    func getLastActive(for userId: String) -> Date? {
+        return userLastActiveCache[userId]
+    }
+    
+    // Update last active time in cache
+    func updateLastActive(for userId: String, date: Date) {
+        userLastActiveCache[userId] = date
     }
     
     // MARK: - Connection
@@ -299,24 +310,63 @@ final class WebSocketManager: ObservableObject {
                 #endif
                 
             case .userStatus(let status):
-                self?.userStatusUpdate = status
-                // Also update the online users set
+                // Update the online users set
                 if status.online {
                     self?.onlineUserIds.insert(status.userId)
                 } else {
                     self?.onlineUserIds.remove(status.userId)
+                    
+                    // Cache the last active time
+                    let lastActive = status.lastActive ?? Date()
+                    self?.userLastActiveCache[status.userId] = lastActive
+                    
+                    // If backend didn't provide lastActive, create updated status with current time
+                    if status.lastActive == nil {
+                        let updatedStatus = UserStatus(
+                            userId: status.userId,
+                            online: false,
+                            lastActive: Date()
+                        )
+                        self?.userStatusUpdate = updatedStatus
+                    } else {
+                        self?.userStatusUpdate = status
+                    }
                 }
+                
+                // If user came online, also cache that they were active now
+                if status.online {
+                    self?.userLastActiveCache[status.userId] = Date()
+                    self?.userStatusUpdate = status
+                }
+                
                 #if DEBUG
                 print("✅ WebSocket: User \(status.userId) is \(status.online ? "online" : "offline")")
-                if let lastActive = status.lastActive {
+                if let lastActive = status.lastActive ?? self?.userLastActiveCache[status.userId] {
                     print("   Last active: \(lastActive)")
                 }
                 #endif
                 
             case .onlineUsersList(let userIds):
-                self?.onlineUserIds = Set(userIds)
+                let previousOnlineUsers = self?.onlineUserIds ?? []
+                let newOnlineUsers = Set(userIds)
+                
+                // Find users who went offline (were online before, not online now)
+                let usersWentOffline = previousOnlineUsers.subtracting(newOnlineUsers)
+                
+                // Update last active time for users who went offline
+                let now = Date()
+                for userId in usersWentOffline {
+                    self?.userLastActiveCache[userId] = now
+                }
+                
+                // Update the online users set
+                self?.onlineUserIds = newOnlineUsers
+                
                 #if DEBUG
                 print("✅ WebSocket: Received online users list (\(userIds.count) users online)")
+                if !usersWentOffline.isEmpty {
+                    print("   Users went offline: \(usersWentOffline.count)")
+                }
                 print("   Online user IDs: \(userIds.prefix(5).joined(separator: ", "))\(userIds.count > 5 ? "..." : "")")
                 #endif
                 

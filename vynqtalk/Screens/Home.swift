@@ -7,21 +7,11 @@
 
 import SwiftUI
 
-enum UserFilterType: String, CaseIterable {
-    case all = "All"
-    case online = "Online"
-    case offline = "Offline"
-    case recent = "Recent"
-    
-    var id: String { rawValue }
-}
-
 struct HomeScreen: View {
     @EnvironmentObject var userVM: UserViewModel
     @EnvironmentObject var nav: NavigationCoordinator
     
     @State private var searchText: String = ""
-    @State private var selectedFilter: UserFilterType = .all
     @State private var tappedUserId: String? = nil
     @State private var appeared = false
     @State private var showNewChatSheet = false
@@ -36,21 +26,6 @@ struct HomeScreen: View {
                 let email = user.email?.lowercased() ?? ""
                 let search = searchText.lowercased()
                 return name.contains(search) || email.contains(search)
-            }
-        }
-        
-        // Apply filter
-        switch selectedFilter {
-        case .all:
-            break
-        case .online:
-            users = users.filter { $0.online == true }
-        case .offline:
-            users = users.filter { $0.online != true }
-        case .recent:
-            users = users.sorted { (u1, u2) in
-                guard let d1 = u1.lastActive, let d2 = u2.lastActive else { return false }
-                return d1 > d2
             }
         }
         
@@ -145,7 +120,7 @@ struct HomeScreen: View {
         .padding(.bottom, 24)
     }
     
-    // MARK: - Search and Filters Section
+    // MARK: - Search Section
     
     @ViewBuilder
     private var searchAndFiltersSection: some View {
@@ -153,27 +128,6 @@ struct HomeScreen: View {
             // Modern Search Bar
             ModernSearchBar(text: $searchText)
                 .padding(.horizontal, 24)
-            
-            // Filter Chips
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(UserFilterType.allCases, id: \.id) { filter in
-                        ModernFilterChip(
-                            title: filter.rawValue,
-                            isSelected: selectedFilter == filter,
-                            count: getFilterCount(filter)
-                        ) {
-                            let generator = UIImpactFeedbackGenerator(style: .light)
-                            generator.impactOccurred()
-                            
-                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                selectedFilter = filter
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal, 24)
-            }
         }
         .padding(.bottom, 24)
     }
@@ -191,7 +145,7 @@ struct HomeScreen: View {
                     ModernErrorView(message: err)
                         .padding(.top, 40)
                 } else if filteredUsers.isEmpty {
-                    ModernEmptyStateView(filterType: selectedFilter)
+                    ModernEmptyStateView()
                         .padding(.top, 40)
                 } else {
                     ForEach(Array(filteredUsers.enumerated()), id: \.element.id) { index, user in
@@ -215,19 +169,6 @@ struct HomeScreen: View {
     }
     
     // MARK: - Helper Methods
-    
-    private func getFilterCount(_ filter: UserFilterType) -> Int {
-        switch filter {
-        case .all:
-            return userVM.users.count
-        case .online:
-            return userVM.users.filter { $0.online == true }.count
-        case .offline:
-            return userVM.users.filter { $0.online != true }.count
-        case .recent:
-            return userVM.users.filter { $0.lastActive != nil }.count
-        }
-    }
     
     private func handleChatTap(user: User) {
         guard let id = user.id else { return }
@@ -309,60 +250,6 @@ struct ModernSearchBar: View {
     }
 }
 
-// MARK: - Modern Filter Chip
-
-struct ModernFilterChip: View {
-    let title: String
-    let isSelected: Bool
-    let count: Int
-    let action: () -> Void
-    @State private var appeared = false
-    
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                Text(title)
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                
-                if count > 0 {
-                    Text("\(count)")
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
-                        .foregroundColor(isSelected ? AppTheme.GradientColors.deepBlack : AppTheme.AccentColors.primary)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(
-                            Capsule()
-                                .fill(isSelected ? .white.opacity(0.9) : AppTheme.AccentColors.primary.opacity(0.2))
-                        )
-                }
-            }
-            .foregroundColor(isSelected ? AppTheme.GradientColors.deepBlack : .white.opacity(0.8))
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(
-                Capsule()
-                    .fill(isSelected ? .white : .white.opacity(0.1))
-                    .overlay(
-                        Capsule()
-                            .stroke(.white.opacity(isSelected ? 0 : 0.2), lineWidth: 1)
-                    )
-            )
-            .shadow(
-                color: isSelected ? .white.opacity(0.3) : .clear,
-                radius: isSelected ? 8 : 0,
-                y: isSelected ? 4 : 0
-            )
-        }
-        .scaleEffect(appeared ? 1 : 0.8)
-        .opacity(appeared ? 1 : 0)
-        .onAppear {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.2)) {
-                appeared = true
-            }
-        }
-    }
-}
-
 // MARK: - Modern Chat List Item
 
 struct ModernChatListItem: View {
@@ -377,9 +264,24 @@ struct ModernChatListItem: View {
         return wsM.isUserOnline(userId)
     }
     
+    private var isTyping: Bool {
+        guard let userId = user.id else { return false }
+        return wsM.isUserTyping(userId)
+    }
+    
     private var lastActiveText: String {
-        guard let lastActive = user.lastActive else { return "" }
+        // First try to get from WebSocket cache
+        if let userId = user.id,
+           let cachedLastActive = wsM.getLastActive(for: userId) {
+            return formatLastActive(cachedLastActive)
+        }
         
+        // Fall back to user's lastActive property
+        guard let lastActive = user.lastActive else { return "" }
+        return formatLastActive(lastActive)
+    }
+    
+    private func formatLastActive(_ lastActive: Date) -> String {
         let now = Date()
         let interval = now.timeIntervalSince(lastActive)
         
@@ -431,17 +333,27 @@ struct ModernChatListItem: View {
                         
                         Spacer()
                         
-                        // Show last active time if not online
-                        if !isOnline && !lastActiveText.isEmpty {
+                        // Show last active time if not online and not typing
+                        if !isOnline && !isTyping && !lastActiveText.isEmpty {
                             Text(lastActiveText)
                                 .font(.system(size: 12, weight: .medium, design: .rounded))
                                 .foregroundColor(.white.opacity(0.5))
                         }
                     }
                     
-                    HStack {
-                        // Show "Active now" if online, otherwise show bio/email
-                        if isOnline {
+                    HStack(spacing: 8) {
+                        // Show typing indicator if user is typing
+                        if isTyping {
+                            HStack(spacing: 4) {
+                                TypingDotsSmall()
+                                
+                                Text("typing")
+                                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                                    .foregroundColor(AppTheme.AccentColors.primary)
+                            }
+                        }
+                        // Show "Active now" if online but not typing
+                        else if isOnline {
                             HStack(spacing: 6) {
                                 Circle()
                                     .fill(AppTheme.AccentColors.online)
@@ -451,7 +363,9 @@ struct ModernChatListItem: View {
                                     .font(.system(size: 14, weight: .medium, design: .rounded))
                                     .foregroundColor(AppTheme.AccentColors.online)
                             }
-                        } else {
+                        }
+                        // Show bio/email if offline
+                        else {
                             Text(user.bio ?? user.email ?? "Start a conversation")
                                 .font(.system(size: 14, weight: .medium, design: .rounded))
                                 .foregroundColor(.white.opacity(0.7))
@@ -497,10 +411,8 @@ struct ModernChatListItem: View {
     
     @ViewBuilder
     private var avatar: some View {
-        if let avatarString = user.avatar,
-           let url = URL(string: avatarString),
-           avatarString.lowercased().hasPrefix("http") {
-            AsyncImage(url: url) { phase in
+        if let avatarURL = user.avatarURL {
+            AsyncImage(url: avatarURL) { phase in
                 switch phase {
                 case .empty:
                     ProgressView()
@@ -596,24 +508,7 @@ struct ModernErrorView: View {
 }
 
 struct ModernEmptyStateView: View {
-    let filterType: UserFilterType
     @State private var appeared = false
-    
-    private var message: String {
-        switch filterType {
-        case .all: return "No conversations yet"
-        case .online: return "No users online"
-        case .offline: return "No offline users"
-        case .recent: return "No recent activity"
-        }
-    }
-    
-    private var subtitle: String {
-        switch filterType {
-        case .all: return "Start chatting with someone!"
-        default: return "Try adjusting your filters"
-        }
-    }
     
     var body: some View {
         VStack(spacing: 24) {
@@ -622,11 +517,11 @@ struct ModernEmptyStateView: View {
                 .foregroundColor(.white.opacity(0.3))
             
             VStack(spacing: 8) {
-                Text(message)
+                Text("No conversations yet")
                     .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
                 
-                Text(subtitle)
+                Text("Start chatting with someone!")
                     .font(.system(size: 16, weight: .medium, design: .rounded))
                     .foregroundColor(.white.opacity(0.7))
             }
@@ -732,5 +627,36 @@ struct NewChatSheet: View {
                 }
             }
         }
+    }
+}
+
+
+// MARK: - Typing Dots Small (for user list)
+
+struct TypingDotsSmall: View {
+    @State private var animationPhase: CGFloat = 0
+    
+    var body: some View {
+        HStack(spacing: 3) {
+            ForEach(0..<3) { index in
+                Circle()
+                    .fill(AppTheme.AccentColors.primary)
+                    .frame(width: 5, height: 5)
+                    .offset(y: dotOffset(for: index))
+                    .animation(
+                        .easeInOut(duration: 0.6)
+                            .repeatForever(autoreverses: true)
+                            .delay(Double(index) * 0.2),
+                        value: animationPhase
+                    )
+            }
+        }
+        .onAppear {
+            animationPhase = 1
+        }
+    }
+    
+    private func dotOffset(for index: Int) -> CGFloat {
+        return animationPhase == 1 ? -4 : 0
     }
 }

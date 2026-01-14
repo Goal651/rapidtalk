@@ -86,6 +86,11 @@ struct ChatScreen: View {
         .onAppear {
             // Initialize online status from WebSocket
             userOnlineStatus = wsM.isUserOnline(userId)
+            
+            // Initialize last active from cache or initial value
+            if let cachedLastActive = wsM.getLastActive(for: userId) {
+                userLastActive = cachedLastActive
+            }
         }
         .task {
             await messageVM.loadConversation(meId: authVM.userId, otherUserId: userId)
@@ -103,7 +108,14 @@ struct ChatScreen: View {
         }
         .onChange(of: wsM.onlineUserIds) { _, _ in
             // Update online status when the online users list changes
+            let wasOnline = userOnlineStatus
             userOnlineStatus = wsM.isUserOnline(userId)
+            
+            // If user went offline, update last active to now
+            if wasOnline && !userOnlineStatus {
+                userLastActive = Date()
+                wsM.updateLastActive(for: userId, date: Date())
+            }
         }
         .onChange(of: wsM.userStatusUpdate?.userId) { _, _ in
             // Update when individual user status changes
@@ -170,15 +182,30 @@ struct ChatScreen: View {
     
     private var userAvatarView: some View {
         Group {
-            if let avatarString = userAvatar,
-               let url = URL(string: avatarString),
-               avatarString.lowercased().hasPrefix("http") {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().scaledToFill()
-                    default:
-                        defaultAvatar
+            if let avatarPath = userAvatar {
+                // Check if it's already a full URL
+                if avatarPath.lowercased().hasPrefix("http") {
+                    AsyncImage(url: URL(string: avatarPath)) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image.resizable().scaledToFill()
+                        default:
+                            defaultAvatar
+                        }
+                    }
+                } else {
+                    // Construct full URL from relative path
+                    let baseURL = APIClient.environment.baseURL
+                    let cleanPath = avatarPath.hasPrefix("/") ? avatarPath : "/\(avatarPath)"
+                    let fullURL = URL(string: "\(baseURL)\(cleanPath)")
+                    
+                    AsyncImage(url: fullURL) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image.resizable().scaledToFill()
+                        default:
+                            defaultAvatar
+                        }
                     }
                 }
             } else {
@@ -364,6 +391,39 @@ struct ChatScreen: View {
                 .foregroundColor(.white)
         }
     }
+    
+    // MARK: - Typing Indicator Logic
+    
+    private func handleTypingChange(oldValue: String, newValue: String) {
+        // Cancel existing timer
+        typingTimer?.invalidate()
+        
+        // If user is typing (text is not empty and changed)
+        if !newValue.isEmpty && oldValue != newValue {
+            // Send typing = true
+            wsM.sendTypingIndicator(
+                userId: authVM.userId,
+                receiverId: userId,
+                isTyping: true
+            )
+            
+            // Set timer to send typing = false after 2 seconds of inactivity
+            typingTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: false) { [weak wsM, authVM, userId] _ in
+                wsM?.sendTypingIndicator(
+                    userId: authVM.userId,
+                    receiverId: userId,
+                    isTyping: false
+                )
+            }
+        } else if newValue.isEmpty {
+            // If text is cleared, immediately send typing = false
+            wsM.sendTypingIndicator(
+                userId: authVM.userId,
+                receiverId: userId,
+                isTyping: false
+            )
+        }
+    }
 }
 
 
@@ -408,10 +468,26 @@ struct UserDetailsSheet: View {
                         // Avatar Section
                         VStack(spacing: 20) {
                             Group {
-                                if let avatarString = userAvatar,
-                                   let url = URL(string: avatarString),
-                                   avatarString.lowercased().hasPrefix("http") {
+                                if let avatarURL = userAvatar,
+                                   let url = URL(string: avatarURL),
+                                   avatarURL.lowercased().hasPrefix("http") {
                                     AsyncImage(url: url) { phase in
+                                        switch phase {
+                                        case .success(let image):
+                                            image
+                                                .resizable()
+                                                .scaledToFill()
+                                        default:
+                                            defaultAvatar
+                                        }
+                                    }
+                                } else if let avatarPath = userAvatar {
+                                    // Handle relative path
+                                    let baseURL = APIClient.environment.baseURL
+                                    let cleanPath = avatarPath.hasPrefix("/") ? avatarPath : "/\(avatarPath)"
+                                    let fullURL = URL(string: "\(baseURL)\(cleanPath)")
+                                    
+                                    AsyncImage(url: fullURL) { phase in
                                         switch phase {
                                         case .success(let image):
                                             image

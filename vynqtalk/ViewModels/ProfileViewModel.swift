@@ -55,4 +55,32 @@ final class ProfileViewModel: ObservableObject {
 
         print("📝 Created fallback user: \(storedName)")
     }
+    
+    // MARK: - Avatar Upload
+    
+    func uploadAvatar(imageData: Data) async {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+        
+        do {
+            let filename = "avatar_\(UUID().uuidString).jpg"
+            let response: APIResponse<User> = try await APIClient.shared.uploadAvatar(
+                imageData: imageData,
+                filename: filename
+            )
+            
+            if response.success, let updatedUser = response.data {
+                user = updatedUser
+                print("✅ Avatar uploaded successfully: \(updatedUser.avatar ?? "no avatar")")
+            } else {
+                errorMessage = response.message
+                print("❌ Avatar upload failed: \(response.message)")
+            }
+        } catch {
+            errorMessage = "Failed to upload avatar: \(error.localizedDescription)"
+            print("❌ Avatar upload error: \(error)")
+        }
+    }
 }
+

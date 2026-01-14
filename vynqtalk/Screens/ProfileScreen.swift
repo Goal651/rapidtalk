@@ -8,6 +8,8 @@ struct ProfileScreen: View {
     @State private var appeared = false
     @State private var showImagePicker = false
     @State private var selectedImage: UIImage?
+    @State private var isUploadingAvatar = false
+    @State private var showImageCropper = false
     
     var body: some View {
         ZStack {
@@ -26,7 +28,8 @@ struct ProfileScreen: View {
                         CleanProfileHeader(
                             user: user,
                             onEditTap: { showEditProfile = true },
-                            onImageTap: { showImagePicker = true }
+                            onImageTap: { showImagePicker = true },
+                            isUploadingAvatar: isUploadingAvatar
                         )
                         .padding(.top, 40)
                         
@@ -54,6 +57,68 @@ struct ProfileScreen: View {
         .sheet(isPresented: $showImagePicker) {
             ImagePicker(selectedImage: $selectedImage)
         }
+        .fullScreenCover(isPresented: $showImageCropper) {
+            if let image = selectedImage {
+                ImageCropper(image: image) { croppedImage in
+                    uploadAvatar(image: croppedImage)
+                }
+            }
+        }
+        .onChange(of: selectedImage) { _, newImage in
+            if newImage != nil {
+                showImageCropper = true
+            }
+        }
+    }
+    
+    // MARK: - Avatar Upload
+    
+    private func uploadAvatar(image: UIImage) {
+        isUploadingAvatar = true
+        
+        Task {
+            // Resize to max 800x800 and compress to JPEG
+            let resizedImage = resizeImage(image: image, maxSize: 800)
+            
+            // Try different compression qualities until under 1MB
+            var compressionQuality: CGFloat = 0.8
+            var imageData = resizedImage.jpegData(compressionQuality: compressionQuality)
+            
+            while let data = imageData, data.count > 1_000_000 && compressionQuality > 0.3 {
+                compressionQuality -= 0.1
+                imageData = resizedImage.jpegData(compressionQuality: compressionQuality)
+            }
+            
+            guard let finalData = imageData else {
+                isUploadingAvatar = false
+                return
+            }
+            
+            #if DEBUG
+            print("📸 Final image size: \(finalData.count) bytes (\(compressionQuality * 100)% quality)")
+            #endif
+            
+            await vm.uploadAvatar(imageData: finalData)
+            isUploadingAvatar = false
+            selectedImage = nil
+        }
+    }
+    
+    private func resizeImage(image: UIImage, maxSize: CGFloat) -> UIImage {
+        let size = image.size
+        let ratio = size.width / size.height
+        
+        var newSize: CGSize
+        if size.width > size.height {
+            newSize = CGSize(width: maxSize, height: maxSize / ratio)
+        } else {
+            newSize = CGSize(width: maxSize * ratio, height: maxSize)
+        }
+        
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        return renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
     }
 }
 
@@ -63,19 +128,18 @@ struct CleanProfileHeader: View {
     let user: User
     let onEditTap: () -> Void
     let onImageTap: () -> Void
+    let isUploadingAvatar: Bool
     @State private var appeared = false
     
     var body: some View {
         VStack(spacing: 24) {
-            // Simple Avatar
+            // Simple Avatar with Upload Indicator
             Button(action: onImageTap) {
                 ZStack {
                     // Avatar
                     Group {
-                        if let avatarString = user.avatar,
-                           let url = URL(string: avatarString),
-                           avatarString.lowercased().hasPrefix("http") {
-                            AsyncImage(url: url) { phase in
+                        if let avatarURL = user.avatarURL {
+                            AsyncImage(url: avatarURL) { phase in
                                 switch phase {
                                 case .success(let image):
                                     image
@@ -105,19 +169,30 @@ struct CleanProfileHeader: View {
                                 lineWidth: 3
                             )
                     )
+                    .opacity(isUploadingAvatar ? 0.5 : 1.0)
                     
-                    // Edit indicator
-                    Image(systemName: "camera.fill")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(width: 28, height: 28)
-                        .background(
-                            Circle()
-                                .fill(AppTheme.AccentColors.primary)
-                        )
-                        .offset(x: 32, y: 32)
+                    // Loading indicator
+                    if isUploadingAvatar {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .scaleEffect(1.5)
+                    }
+                    
+                    // Edit indicator (hide when uploading)
+                    if !isUploadingAvatar {
+                        Image(systemName: "camera.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(width: 28, height: 28)
+                            .background(
+                                Circle()
+                                    .fill(AppTheme.AccentColors.primary)
+                            )
+                            .offset(x: 32, y: 32)
+                    }
                 }
             }
+            .disabled(isUploadingAvatar)
             .scaleEffect(appeared ? 1 : 0.8)
             .opacity(appeared ? 1 : 0)
             
