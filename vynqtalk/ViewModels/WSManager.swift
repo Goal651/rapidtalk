@@ -25,28 +25,128 @@ struct WebSocketSendMessage: Encodable {
     }
 }
 
-struct WebSocketResponse: Decodable {
-    let success: Bool
-    let data: WebSocketData?
-    let message: String
+struct WebSocketTypingMessage: Encodable {
+    let type: String = "typing"
+    let userId: String
+    let receiverId: String
+    let isTyping: Bool
 }
 
-enum WebSocketData: Decodable {
-    case message(Message)
-    case userStatus(UserStatus)
-    case unknown
+struct WebSocketResponse: Decodable {
+    let success: Bool
+    let message: String
+    let data: DataContainer?
     
-    init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
+    struct DataContainer: Decodable {
+        // User status fields - single user update
+        let userId: String?
+        let online: Bool?
+        let lastActive: Double?
         
-        if let message = try? container.decode(Message.self) {
-            self = .message(message)
-        } else if let status = try? container.decode(UserStatus.self) {
-            self = .userStatus(status)
-        } else {
-            self = .unknown
+        // Online users array - bulk update
+        let userIds: [String]?
+        
+        // Typing indicator fields
+        let isTyping: Bool?
+        
+        // Message fields
+        let id: String?
+        let content: String?
+        let senderId: String?
+        let receiverId: String?
+        let sender: User?
+        let receiver: User?
+        let timestamp: Date?
+        let type: String?
+        let fileName: String?
+        let edited: Bool?
+        
+        enum CodingKeys: String, CodingKey {
+            case userId, online, lastActive, userIds
+            case isTyping
+            case id, content, timestamp, type, fileName, edited
+            case senderId, receiverId
+            case sender, receiver
         }
     }
+    
+    var parsedData: WebSocketData? {
+        guard let data = data else { return nil }
+        
+        // Check if it's an online users list update
+        if message == "online_users", let userIds = data.userIds {
+            return .onlineUsersList(userIds)
+        }
+        
+        // Check if it's a typing indicator
+        if message == "typing",
+           let userId = data.userId,
+           let isTyping = data.isTyping {
+            return .typing(userId: userId, isTyping: isTyping)
+        }
+        
+        // Check if it's a single user status update
+        if message == "user_status", 
+           let userId = data.userId,
+           let online = data.online {
+            let lastActive: Date?
+            if let timestamp = data.lastActive {
+                lastActive = Date(timeIntervalSinceReferenceDate: timestamp)
+            } else {
+                lastActive = nil
+            }
+            return .userStatus(UserStatus(userId: userId, online: online, lastActive: lastActive))
+        }
+        
+        // Check if it's a chat message
+        if message == "new_message" || message == "chat_message",
+           let id = data.id,
+           let content = data.content {
+            
+            // Use full User objects if available, otherwise create minimal User objects from IDs
+            let sender: User?
+            if let fullSender = data.sender {
+                sender = fullSender
+            } else if let senderId = data.senderId {
+                sender = User(id: senderId, name: nil, avatar: nil, password: nil, email: nil, userRole: nil, status: nil, bio: nil, lastActive: nil, createdAt: nil, latestMessage: nil, unreadMessages: nil, online: nil)
+            } else {
+                sender = nil
+            }
+            
+            let receiver: User?
+            if let fullReceiver = data.receiver {
+                receiver = fullReceiver
+            } else if let receiverId = data.receiverId {
+                receiver = User(id: receiverId, name: nil, avatar: nil, password: nil, email: nil, userRole: nil, status: nil, bio: nil, lastActive: nil, createdAt: nil, latestMessage: nil, unreadMessages: nil, online: nil)
+            } else {
+                receiver = nil
+            }
+            
+            let msg = Message(
+                id: id,
+                content: content,
+                type: MessageType(rawValue: data.type ?? "TEXT") ?? .text,
+                sender: sender,
+                receiver: receiver,
+                timestamp: data.timestamp,
+                fileName: data.fileName,
+                edited: data.edited,
+                reactions: nil,
+                replyTo: nil
+            )
+            return .message(msg)
+        }
+        
+        return .unknown
+    }
+}
+
+enum WebSocketData {
+    case message(Message)
+    case userStatus(UserStatus)
+    case onlineUsersList([String])
+    case typing(userId: String, isTyping: Bool)
+    case unknown
 }
 
 struct UserStatus: Decodable {
@@ -62,10 +162,22 @@ final class WebSocketManager: ObservableObject {
     @Published var isConnected = false
     @Published var incomingMessage: Message?
     @Published var userStatusUpdate: UserStatus?
+    @Published var onlineUserIds: Set<String> = [] // Array of currently online user IDs
+    @Published var typingUsers: [String: Bool] = [:] // userId: isTyping
     
     private var reconnectAttempts = 0
     private let maxReconnectAttempts = 5
     private var reconnectTimer: Timer?
+    
+    // Helper to check if a user is online
+    func isUserOnline(_ userId: String) -> Bool {
+        return onlineUserIds.contains(userId)
+    }
+    
+    // Helper to check if a user is typing
+    func isUserTyping(_ userId: String) -> Bool {
+        return typingUsers[userId] == true
+    }
     
     // MARK: - Connection
     
@@ -164,9 +276,16 @@ final class WebSocketManager: ObservableObject {
     }
     
     private func handleWebSocketResponse(_ response: WebSocketResponse) {
-        guard response.success, let data = response.data else {
+        guard response.success else {
             #if DEBUG
             print("⚠️ WebSocket response not successful: \(response.message)")
+            #endif
+            return
+        }
+        
+        guard let data = response.parsedData else {
+            #if DEBUG
+            print("⚠️ WebSocket: Could not parse data for message type: \(response.message)")
             #endif
             return
         }
@@ -181,13 +300,35 @@ final class WebSocketManager: ObservableObject {
                 
             case .userStatus(let status):
                 self?.userStatusUpdate = status
+                // Also update the online users set
+                if status.online {
+                    self?.onlineUserIds.insert(status.userId)
+                } else {
+                    self?.onlineUserIds.remove(status.userId)
+                }
                 #if DEBUG
                 print("✅ WebSocket: User \(status.userId) is \(status.online ? "online" : "offline")")
+                if let lastActive = status.lastActive {
+                    print("   Last active: \(lastActive)")
+                }
+                #endif
+                
+            case .onlineUsersList(let userIds):
+                self?.onlineUserIds = Set(userIds)
+                #if DEBUG
+                print("✅ WebSocket: Received online users list (\(userIds.count) users online)")
+                print("   Online user IDs: \(userIds.prefix(5).joined(separator: ", "))\(userIds.count > 5 ? "..." : "")")
+                #endif
+                
+            case .typing(let userId, let isTyping):
+                self?.typingUsers[userId] = isTyping
+                #if DEBUG
+                print("✅ WebSocket: User \(userId) is \(isTyping ? "typing" : "not typing")")
                 #endif
                 
             case .unknown:
                 #if DEBUG
-                print("⚠️ WebSocket: Unknown data type")
+                print("⚠️ WebSocket: Unknown data type for message: \(response.message)")
                 #endif
             }
         }
@@ -218,6 +359,34 @@ final class WebSocketManager: ObservableObject {
             } else {
                 #if DEBUG
                 print("📤 WebSocket: Sent message to user \(receiverId)")
+                #endif
+            }
+        }
+    }
+    
+    func sendTypingIndicator(userId: String, receiverId: String, isTyping: Bool) {
+        let typingMessage = WebSocketTypingMessage(
+            userId: userId,
+            receiverId: receiverId,
+            isTyping: isTyping
+        )
+        
+        guard let data = try? JSONEncoder().encode(typingMessage),
+              let string = String(data: data, encoding: .utf8) else {
+            #if DEBUG
+            print("❌ Failed to encode typing indicator")
+            #endif
+            return
+        }
+        
+        task?.send(.string(string)) { error in
+            if let error = error {
+                #if DEBUG
+                print("❌ Failed to send typing indicator: \(error.localizedDescription)")
+                #endif
+            } else {
+                #if DEBUG
+                print("📤 WebSocket: Sent typing indicator (isTyping: \(isTyping)) to user \(receiverId)")
                 #endif
             }
         }

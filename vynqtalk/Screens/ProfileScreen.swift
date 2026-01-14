@@ -6,7 +6,6 @@ struct ProfileScreen: View {
     @StateObject private var vm = ProfileViewModel()
     @State private var showEditProfile = false
     @State private var appeared = false
-    @State private var headerOffset: CGFloat = 0
     @State private var showImagePicker = false
     @State private var selectedImage: UIImage?
     
@@ -22,23 +21,20 @@ struct ProfileScreen: View {
                 PremiumErrorView(message: err)
             } else if let user = vm.user {
                 ScrollView {
-                    VStack(spacing: 0) {
-                        // Hero Profile Header
-                        HeroProfileHeader(
+                    VStack(spacing: 32) {
+                        // Clean Profile Header
+                        CleanProfileHeader(
                             user: user,
-                            headerOffset: $headerOffset,
                             onEditTap: { showEditProfile = true },
                             onImageTap: { showImagePicker = true }
                         )
+                        .padding(.top, 40)
                         
-                        // Profile Content
-                        ProfileContent(user: user)
-                            .padding(.top, 40)
+                        // Essential Content Only
+                        EssentialProfileContent(user: user)
                     }
-                }
-                .coordinateSpace(name: "scroll")
-                .onPreferenceChange(ScrollOffsetPreferenceKey.self) { value in
-                    headerOffset = value
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 40)
                 }
             } else {
                 PremiumEmptyStateView()
@@ -61,384 +57,127 @@ struct ProfileScreen: View {
     }
 }
 
-// MARK: - Hero Profile Header
+// MARK: - Clean Profile Header
 
-struct HeroProfileHeader: View {
+struct CleanProfileHeader: View {
     let user: User
-    @Binding var headerOffset: CGFloat
     let onEditTap: () -> Void
     let onImageTap: () -> Void
     @State private var appeared = false
-    @State private var floatingOffset: CGFloat = 0
     
     var body: some View {
-        GeometryReader { geometry in
-            let offset: CGFloat = geometry.frame(in: .named("scroll")).minY
-            let height: CGFloat = 400
-            let progress: CGFloat = max(0, min(1, (-offset) / 100.0))
-            
-            ZStack(alignment: .bottom) {
-                // Animated Background
-                AnimatedProfileBackground()
-                    .frame(height: height + max(0, offset))
-                    .clipped()
-                    .offset(y: offset > 0 ? (-offset) : 0)
-                
-                // Floating Elements
-                FloatingProfileElements()
-                    .offset(y: floatingOffset)
-                    .opacity(1.0 - (progress * 0.5))
-                
-                // Profile Content
-                VStack(spacing: 24) {
-                    Spacer()
-                    
-                    // Avatar with Glow Effect
-                    PremiumAvatar(
-                        user: user,
-                        size: 120,
-                        onTap: onImageTap
-                    )
-                    .scaleEffect(appeared ? 1 : 0.5)
-                    .opacity(appeared ? 1 : 0)
-                    .animation(.spring(response: 0.8, dampingFraction: 0.6).delay(0.2), value: appeared)
-                    
-                    // User Info with Glass Effect
-                    VStack(spacing: 16) {
-                        // Name and verification
-                        HStack(spacing: 12) {
-                            Text(user.name ?? "Unknown User")
-                                .font(.system(size: 28, weight: .bold, design: .rounded))
-                                .foregroundColor(.white)
-                                .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
-                            
-                            // Verification badge
-                            Image(systemName: "checkmark.seal.fill")
-                                .font(.system(size: 20, weight: .semibold))
-                                .foregroundColor(AppTheme.AccentColors.primary)
-                                .background(
-                                    Circle()
-                                        .fill(.white)
-                                        .frame(width: 24, height: 24)
-                                )
-                        }
-                        
-                        if let email = user.email {
-                            HStack(spacing: 8) {
-                                Image(systemName: "envelope.fill")
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(AppTheme.AccentColors.primary)
-                                
-                                Text(email)
-                                    .font(.system(size: 16, weight: .medium, design: .rounded))
-                                    .foregroundColor(.white.opacity(0.8))
+        VStack(spacing: 24) {
+            // Simple Avatar
+            Button(action: onImageTap) {
+                ZStack {
+                    // Avatar
+                    Group {
+                        if let avatarString = user.avatar,
+                           let url = URL(string: avatarString),
+                           avatarString.lowercased().hasPrefix("http") {
+                            AsyncImage(url: url) { phase in
+                                switch phase {
+                                case .success(let image):
+                                    image
+                                        .resizable()
+                                        .scaledToFill()
+                                default:
+                                    defaultAvatarContent
+                                }
                             }
-                        }
-                        
-                        // Bio or default message
-                        Text(user.bio ?? "Welcome to VynqTalk! 🚀")
-                            .font(.system(size: 16, weight: .medium, design: .rounded))
-                            .foregroundColor(.white.opacity(0.7))
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 16)
-                        
-                        // Status Badge with enhanced styling
-                        StatusBadge(isOnline: user.online == true)
-                        
-                        // Join date
-                        if let createdAt = user.createdAt {
-                            HStack(spacing: 6) {
-                                Image(systemName: "calendar")
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(.white.opacity(0.5))
-                                
-                                Text("Joined \(formatDate(createdAt))")
-                                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                                    .foregroundColor(.white.opacity(0.5))
-                            }
+                        } else {
+                            defaultAvatarContent
                         }
                     }
-                    .padding(.horizontal, 32)
-                    .padding(.vertical, 24)
-                    .background(
-                        RoundedRectangle(cornerRadius: 24)
-                            .fill(.ultraThinMaterial)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 24)
-                                    .stroke(.white.opacity(0.2), lineWidth: 1)
-                            )
-                    )
-                    .opacity(appeared ? 1 : 0)
-                    .offset(y: appeared ? 0 : 30)
-                    .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.4), value: appeared)
-                    
-                    // Edit Button
-                    PremiumButton(
-                        title: "Edit Profile",
-                        icon: "pencil",
-                        style: .glass,
-                        action: onEditTap
-                    )
-                    .opacity(appeared ? 1 : 0)
-                    .offset(y: appeared ? 0 : 40)
-                    .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.6), value: appeared)
-                    
-                    Spacer(minLength: 40)
-                }
-            }
-        }
-        .frame(height: 400)
-        .onAppear {
-            appeared = true
-            withAnimation(.easeInOut(duration: 3).repeatForever(autoreverses: true)) {
-                floatingOffset = -15
-            }
-        }
-    }
-}
-
-// MARK: - Animated Profile Background
-
-struct AnimatedProfileBackground: View {
-    @State private var animationPhase: CGFloat = 0
-    
-    var body: some View {
-        ZStack {
-            // Base gradient
-            LinearGradient(
-                colors: [
-                    Color.black,
-                    AppTheme.AccentColors.primary.opacity(0.3),
-                    Color.black
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            
-            // Animated orbs
-            ForEach(0..<5) { index in
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [
-                                orbColors[index].opacity(0.4),
-                                orbColors[index].opacity(0.1),
-                                .clear
-                            ],
-                            center: .center,
-                            startRadius: 0,
-                            endRadius: 100
-                        )
-                    )
-                    .frame(width: 200, height: 200)
-                    .offset(
-                        x: cos(animationPhase + Double(index) * .pi / 2.5) * 150,
-                        y: sin(animationPhase + Double(index) * .pi / 2.5) * 100
-                    )
-                    .blur(radius: 20)
-            }
-        }
-        .onAppear {
-            withAnimation(.linear(duration: 20).repeatForever(autoreverses: false)) {
-                animationPhase = .pi * 2
-            }
-        }
-    }
-    
-    private let orbColors: [Color] = [
-        AppTheme.AccentColors.primary,
-        AppTheme.AccentColors.secondary,
-        AppTheme.AccentColors.online,
-        Color(red: 0.8, green: 0.4, blue: 1.0),
-        Color(red: 1.0, green: 0.6, blue: 0.8)
-    ]
-}
-
-// MARK: - Floating Profile Elements
-
-struct FloatingProfileElements: View {
-    @State private var rotation: Double = 0
-    @State private var particlePositions: [CGPoint] = []
-    
-    var body: some View {
-        ZStack {
-            // Main floating icons
-            ForEach(0..<8) { index in
-                FloatingIcon(
-                    icon: icons[index],
-                    color: colors[index % colors.count],
-                    angle: Double(index) * 45,
-                    radius: 120,
-                    rotation: rotation
-                )
-            }
-            
-            // Particle system
-            ForEach(0..<20) { index in
-                Circle()
-                    .fill(colors[index % colors.count].opacity(0.6))
-                    .frame(width: CGFloat.random(in: 2...6), height: CGFloat.random(in: 2...6))
-                    .position(
-                        x: particlePositions.indices.contains(index) ? particlePositions[index].x : 0,
-                        y: particlePositions.indices.contains(index) ? particlePositions[index].y : 0
-                    )
-                    .blur(radius: 1)
-            }
-        }
-        .onAppear {
-            // Initialize particle positions
-            particlePositions = (0..<20).map { _ in
-                CGPoint(
-                    x: CGFloat.random(in: -200...200),
-                    y: CGFloat.random(in: -200...200)
-                )
-            }
-            
-            // Start animations
-            withAnimation(.linear(duration: 30).repeatForever(autoreverses: false)) {
-                rotation = 360
-            }
-            
-            // Animate particles
-            animateParticles()
-        }
-    }
-    
-    private func animateParticles() {
-        withAnimation(.easeInOut(duration: 4).repeatForever(autoreverses: true)) {
-            particlePositions = particlePositions.map { _ in
-                CGPoint(
-                    x: CGFloat.random(in: -250...250),
-                    y: CGFloat.random(in: -250...250)
-                )
-            }
-        }
-    }
-    
-    private let icons = ["heart.fill", "star.fill", "bolt.fill", "crown.fill", "gem.fill", "sparkles", "moon.stars.fill", "sun.max.fill"]
-    private let colors = [
-        AppTheme.AccentColors.primary,
-        AppTheme.AccentColors.online,
-        Color.orange,
-        Color.purple,
-        Color.pink,
-        Color.cyan,
-        Color.yellow,
-        Color.mint
-    ]
-}
-
-struct FloatingIcon: View {
-    let icon: String
-    let color: Color
-    let angle: Double
-    let radius: CGFloat
-    let rotation: Double
-    
-    var body: some View {
-        Image(systemName: icon)
-            .font(.system(size: 20, weight: .semibold))
-            .foregroundColor(color)
-            .frame(width: 40, height: 40)
-            .background(
-                Circle()
-                    .fill(.ultraThinMaterial)
+                    .frame(width: 100, height: 100)
+                    .clipShape(Circle())
                     .overlay(
                         Circle()
-                            .stroke(color.opacity(0.5), lineWidth: 1)
-                    )
-            )
-            .shadow(color: color.opacity(0.3), radius: 8, y: 4)
-            .offset(
-                x: cos((angle + rotation) * .pi / 180) * radius,
-                y: sin((angle + rotation) * .pi / 180) * radius
-            )
-    }
-}
-
-// MARK: - Premium Avatar
-
-struct PremiumAvatar: View {
-    let user: User
-    let size: CGFloat
-    let onTap: () -> Void
-    @State private var glowIntensity: Double = 0.5
-    
-    var body: some View {
-        Button(action: onTap) {
-            ZStack {
-                // Glow effect
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [
-                                AppTheme.AccentColors.primary.opacity(glowIntensity),
-                                .clear
-                            ],
-                            center: .center,
-                            startRadius: size / 2,
-                            endRadius: size
-                        )
-                    )
-                    .frame(width: size * 1.5, height: size * 1.5)
-                
-                // Avatar
-                Group {
-                    if let avatarString = user.avatar,
-                       let url = URL(string: avatarString),
-                       avatarString.lowercased().hasPrefix("http") {
-                        AsyncImage(url: url) { phase in
-                            switch phase {
-                            case .success(let image):
-                                image
-                                    .resizable()
-                                    .scaledToFill()
-                            default:
-                                defaultAvatarContent
-                            }
-                        }
-                    } else {
-                        defaultAvatarContent
-                    }
-                }
-                .frame(width: size, height: size)
-                .clipShape(Circle())
-                .overlay(
-                    Circle()
-                        .stroke(
-                            LinearGradient(
-                                colors: [
-                                    AppTheme.AccentColors.primary,
-                                    AppTheme.AccentColors.secondary,
-                                    AppTheme.AccentColors.online
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 4
-                        )
-                )
-                .shadow(color: AppTheme.AccentColors.primary.opacity(0.5), radius: 20, y: 10)
-                
-                // Edit indicator
-                Image(systemName: "camera.fill")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(width: 32, height: 32)
-                    .background(
-                        Circle()
-                            .fill(AppTheme.AccentColors.primary)
-                            .overlay(
-                                Circle()
-                                    .stroke(.white, lineWidth: 2)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [
+                                        AppTheme.AccentColors.primary,
+                                        AppTheme.AccentColors.secondary
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 3
                             )
                     )
-                    .offset(x: size * 0.3, y: size * 0.3)
+                    
+                    // Edit indicator
+                    Image(systemName: "camera.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(width: 28, height: 28)
+                        .background(
+                            Circle()
+                                .fill(AppTheme.AccentColors.primary)
+                        )
+                        .offset(x: 32, y: 32)
+                }
             }
+            .scaleEffect(appeared ? 1 : 0.8)
+            .opacity(appeared ? 1 : 0)
+            
+            // User Info
+            VStack(spacing: 12) {
+                Text(user.name ?? "Unknown User")
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+                
+                if let bio = user.bio {
+                    Text(bio)
+                        .font(.system(size: 15, weight: .medium, design: .rounded))
+                        .foregroundColor(.white.opacity(0.7))
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                }
+                
+                // Status Badge
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(user.online == true ? AppTheme.AccentColors.online : .gray)
+                        .frame(width: 8, height: 8)
+                    
+                    Text(user.online == true ? "Online" : "Offline")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundColor(.white.opacity(0.8))
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule()
+                        .fill(.white.opacity(0.1))
+                )
+            }
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 20)
+            
+            // Edit Button
+            Button(action: onEditTap) {
+                HStack(spacing: 8) {
+                    Image(systemName: "pencil")
+                        .font(.system(size: 14, weight: .semibold))
+                    
+                    Text("Edit Profile")
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 48)
+                .background(
+                    RoundedRectangle(cornerRadius: 24)
+                        .fill(.white.opacity(0.1))
+                )
+            }
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 30)
         }
         .onAppear {
-            withAnimation(.easeInOut(duration: 2).repeatForever(autoreverses: true)) {
-                glowIntensity = 0.8
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                appeared = true
             }
         }
     }
@@ -455,115 +194,43 @@ struct PremiumAvatar: View {
             )
             
             Image(systemName: "person.fill")
-                .font(.system(size: size * 0.4, weight: .semibold))
+                .font(.system(size: 40, weight: .semibold))
                 .foregroundColor(.white)
         }
     }
 }
 
-// MARK: - Status Badge
+// MARK: - Essential Profile Content
 
-struct StatusBadge: View {
-    let isOnline: Bool
-    @State private var pulseScale: CGFloat = 1.0
-    
-    var body: some View {
-        HStack(spacing: 8) {
-            Circle()
-                .fill(isOnline ? AppTheme.AccentColors.online : .gray)
-                .frame(width: 12, height: 12)
-                .scaleEffect(pulseScale)
-                .overlay(
-                    Circle()
-                        .stroke(isOnline ? AppTheme.AccentColors.online.opacity(0.3) : .clear, lineWidth: 4)
-                        .scaleEffect(pulseScale)
-                )
-            
-            Text(isOnline ? "Online" : "Offline")
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                .foregroundColor(.white.opacity(0.9))
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(
-            Capsule()
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    Capsule()
-                        .stroke(.white.opacity(0.2), lineWidth: 1)
-                )
-        )
-        .onAppear {
-            if isOnline {
-                withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
-                    pulseScale = 1.3
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Profile Content
-
-struct ProfileContent: View {
+struct EssentialProfileContent: View {
     let user: User
     @EnvironmentObject var nav: NavigationCoordinator
     @EnvironmentObject var authVM: AuthViewModel
     @State private var appeared = false
     
     var body: some View {
-        VStack(spacing: 32) {
-            // Stats Section
-            PremiumStatsSection(user: user)
-                .opacity(appeared ? 1 : 0)
-                .offset(y: appeared ? 0 : 30)
-                .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.1), value: appeared)
+        VStack(spacing: 24) {
+            // Account Settings
+            SettingsSection(
+                title: "Account",
+                items: [
+                    SettingsItem(icon: "person.circle", title: "Personal Info", subtitle: "Update your details", action: {}),
+                    SettingsItem(icon: "bell.badge", title: "Notifications", subtitle: "Manage alerts", action: {}),
+                    SettingsItem(icon: "lock.shield", title: "Privacy & Security", subtitle: "Control your privacy", action: {})
+                ]
+            )
             
-            // Quick Actions
-            QuickActionsSection()
-                .opacity(appeared ? 1 : 0)
-                .offset(y: appeared ? 0 : 40)
-                .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.2), value: appeared)
-            
-            // Settings Sections
-            VStack(spacing: 24) {
-                SettingsSection(
-                    title: "Account",
-                    items: [
-                        SettingsItem(icon: "person.circle", title: "Personal Info", subtitle: "Update your details", action: {}),
-                        SettingsItem(icon: "bell.badge", title: "Notifications", subtitle: "Manage alerts", action: {}),
-                        SettingsItem(icon: "lock.shield", title: "Privacy", subtitle: "Security settings", action: {})
-                    ]
-                )
-                
-                SettingsSection(
-                    title: "Preferences",
-                    items: [
-                        SettingsItem(icon: "paintbrush", title: "Appearance", subtitle: "Themes & display", action: {}),
-                        SettingsItem(icon: "globe", title: "Language", subtitle: "English", action: {}),
-                        SettingsItem(icon: "iphone", title: "Accessibility", subtitle: "Ease of use", action: {})
-                    ]
-                )
-                
-                SettingsSection(
-                    title: "Support",
-                    items: [
-                        SettingsItem(icon: "questionmark.circle", title: "Help Center", subtitle: "Get assistance", action: {}),
-                        SettingsItem(icon: "star", title: "Rate App", subtitle: "Share feedback", action: {}),
-                        SettingsItem(icon: "info.circle", title: "About", subtitle: "Version 1.0.0", action: {})
-                    ]
-                )
-            }
-            .opacity(appeared ? 1 : 0)
-            .offset(y: appeared ? 0 : 50)
-            .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.3), value: appeared)
+            // App Settings
+            SettingsSection(
+                title: "Preferences",
+                items: [
+                    SettingsItem(icon: "paintbrush", title: "Appearance", subtitle: "Themes & display", action: {}),
+                    SettingsItem(icon: "questionmark.circle", title: "Help & Support", subtitle: "Get assistance", action: {})
+                ]
+            )
             
             // Logout Button
-            PremiumButton(
-                title: "Sign Out",
-                icon: "rectangle.portrait.and.arrow.right",
-                style: .destructive
-            ) {
+            Button {
                 nav.showAlert(AlertConfig(
                     title: "Sign Out",
                     message: "Are you sure you want to sign out?",
@@ -578,280 +245,34 @@ struct ProfileContent: View {
                         action: {}
                     )
                 ))
-            }
-            .opacity(appeared ? 1 : 0)
-            .offset(y: appeared ? 0 : 60)
-            .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.4), value: appeared)
-            
-            Spacer(minLength: 100)
-        }
-        .padding(.horizontal, 24)
-        .onAppear {
-            appeared = true
-        }
-    }
-}
-
-// MARK: - Premium Stats Section
-
-struct PremiumStatsSection: View {
-    let user: User
-    @State private var animatedValues = [0, 0, 0, 0]
-    @State private var appeared = false
-    
-    // Calculate real stats from user data
-    private var realStats: [Int] {
-        let messageCount = Int.random(in: 50...500) // Would come from API
-        let contactCount = Int.random(in: 10...100) // Would come from API  
-        let mediaCount = Int.random(in: 20...200) // Would come from API
-        let groupCount = Int.random(in: 1...25) // Would come from API
-        return [messageCount, contactCount, mediaCount, groupCount]
-    }
-    
-    private let labels = ["Messages", "Contacts", "Media", "Groups"]
-    private let icons = ["message.fill", "person.2.fill", "photo.fill", "person.3.fill"]
-    private let colors = [
-        AppTheme.AccentColors.primary,
-        AppTheme.AccentColors.online,
-        Color.orange,
-        Color.purple
-    ]
-    
-    var body: some View {
-        VStack(spacing: 20) {
-            HStack {
-                Text("Your Activity")
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
-                
-                Spacer()
-                
-                // Last updated indicator
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(AppTheme.AccentColors.online)
-                        .frame(width: 8, height: 8)
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                        .font(.system(size: 16, weight: .semibold))
                     
-                    Text("Live")
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
-                        .foregroundColor(AppTheme.AccentColors.online)
+                    Text("Sign Out")
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
+                .foregroundColor(AppTheme.AccentColors.error)
+                .frame(maxWidth: .infinity)
+                .frame(height: 52)
                 .background(
-                    Capsule()
-                        .fill(AppTheme.AccentColors.online.opacity(0.2))
-                )
-            }
-            
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 16) {
-                ForEach(0..<4) { index in
-                    PremiumStatCard(
-                        icon: icons[index],
-                        value: animatedValues[index],
-                        label: labels[index],
-                        color: colors[index],
-                        delay: Double(index) * 0.2
-                    )
-                }
-            }
-        }
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 30)
-        .onAppear {
-            withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.1)) {
-                appeared = true
-            }
-            
-            // Animate counters
-            for index in 0..<realStats.count {
-                withAnimation(.easeOut(duration: 2.0).delay(Double(index) * 0.3)) {
-                    animatedValues[index] = realStats[index]
-                }
-            }
-        }
-    }
-}
-
-struct PremiumStatCard: View {
-    let icon: String
-    let value: Int
-    let label: String
-    let color: Color
-    let delay: Double
-    @State private var appeared = false
-    @State private var isHovered = false
-    
-    var body: some View {
-        VStack(spacing: 12) {
-            ZStack {
-                // Animated background
-                Circle()
-                    .fill(color.opacity(isHovered ? 0.3 : 0.2))
-                    .frame(width: 50, height: 50)
-                    .scaleEffect(isHovered ? 1.1 : 1.0)
-                
-                // Pulsing ring
-                Circle()
-                    .stroke(color.opacity(0.4), lineWidth: 2)
-                    .frame(width: 60, height: 60)
-                    .scaleEffect(appeared ? 1 : 0)
-                
-                Image(systemName: icon)
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundColor(color)
-                    .scaleEffect(appeared ? 1 : 0.5)
-            }
-            
-            VStack(spacing: 4) {
-                // Animated counter
-                Text("\(value)")
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
-                    .contentTransition(.numericText())
-                
-                Text(label)
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                    .foregroundColor(.white.opacity(0.7))
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 20)
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(
-                            LinearGradient(
-                                colors: [color.opacity(0.5), color.opacity(0.1)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1
+                    RoundedRectangle(cornerRadius: 26)
+                        .fill(.white.opacity(0.08))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 26)
+                                .stroke(AppTheme.AccentColors.error.opacity(0.3), lineWidth: 1.5)
                         )
                 )
-        )
-        .shadow(color: color.opacity(0.2), radius: 10, y: 5)
-        .scaleEffect(appeared ? 1 : 0.8)
+            }
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 30)
+        }
         .onAppear {
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(delay)) {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.2)) {
                 appeared = true
             }
         }
-        .onTapGesture {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                isHovered.toggle()
-            }
-            
-            let generator = UIImpactFeedbackGenerator(style: .light)
-            generator.impactOccurred()
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                    isHovered = false
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Quick Actions Section
-
-struct QuickActionsSection: View {
-    var body: some View {
-        VStack(spacing: 16) {
-            Text("Quick Actions")
-                .font(.system(size: 20, weight: .bold, design: .rounded))
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            
-            HStack(spacing: 16) {
-                QuickActionButton(
-                    icon: "qrcode",
-                    title: "QR Code",
-                    color: AppTheme.AccentColors.primary,
-                    action: {}
-                )
-                
-                QuickActionButton(
-                    icon: "square.and.arrow.up",
-                    title: "Share",
-                    color: AppTheme.AccentColors.online,
-                    action: {}
-                )
-                
-                QuickActionButton(
-                    icon: "bookmark",
-                    title: "Saved",
-                    color: Color.orange,
-                    action: {}
-                )
-                
-                QuickActionButton(
-                    icon: "heart",
-                    title: "Favorites",
-                    color: Color.pink,
-                    action: {}
-                )
-            }
-        }
-    }
-}
-
-struct QuickActionButton: View {
-    let icon: String
-    let title: String
-    let color: Color
-    let action: () -> Void
-    @State private var isPressed = false
-    
-    var body: some View {
-        Button(action: {
-            let generator = UIImpactFeedbackGenerator(style: .light)
-            generator.impactOccurred()
-            action()
-        }) {
-            VStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(color)
-                    .frame(width: 44, height: 44)
-                    .background(
-                        Circle()
-                            .fill(color.opacity(0.2))
-                    )
-                
-                Text(title)
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                    .foregroundColor(.white.opacity(0.8))
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(.ultraThinMaterial)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(.white.opacity(0.1), lineWidth: 1)
-                    )
-            )
-            .scaleEffect(isPressed ? 0.95 : 1.0)
-        }
-        .buttonStyle(PlainButtonStyle())
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in
-                    withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
-                        isPressed = true
-                    }
-                }
-                .onEnded { _ in
-                    withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
-                        isPressed = false
-                    }
-                }
-        )
     }
 }
 
@@ -865,35 +286,30 @@ struct SettingsSection: View {
     var body: some View {
         VStack(spacing: 16) {
             Text(title)
-                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .font(.system(size: 18, weight: .bold, design: .rounded))
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity, alignment: .leading)
             
             VStack(spacing: 0) {
                 ForEach(Array(items.enumerated()), id: \.offset) { index, item in
-                    PremiumSettingsRow(item: item)
+                    SettingsRow(item: item)
                     
                     if index < items.count - 1 {
                         Divider()
                             .background(.white.opacity(0.1))
-                            .padding(.leading, 60)
+                            .padding(.leading, 56)
                     }
                 }
             }
             .background(
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(.ultraThinMaterial)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(.white.opacity(0.1), lineWidth: 1)
-                    )
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(.white.opacity(0.08))
             )
-            .shadow(color: .black.opacity(0.1), radius: 10, y: 5)
         }
         .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 30)
+        .offset(y: appeared ? 0 : 20)
         .onAppear {
-            withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.1)) {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.1)) {
                 appeared = true
             }
         }
@@ -907,7 +323,7 @@ struct SettingsItem {
     let action: () -> Void
 }
 
-struct PremiumSettingsRow: View {
+struct SettingsRow: View {
     let item: SettingsItem
     @State private var isPressed = false
     
@@ -917,33 +333,29 @@ struct PremiumSettingsRow: View {
             generator.impactOccurred()
             item.action()
         }) {
-            HStack(spacing: 16) {
+            HStack(spacing: 14) {
                 Image(systemName: item.icon)
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(AppTheme.AccentColors.primary)
-                    .frame(width: 32, height: 32)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(AppTheme.AccentColors.primary.opacity(0.2))
-                    )
+                    .frame(width: 28, height: 28)
                 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(item.title)
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
                         .foregroundColor(.white)
                     
                     Text(item.subtitle)
-                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
                         .foregroundColor(.white.opacity(0.6))
                 }
                 
                 Spacer()
                 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.white.opacity(0.4))
             }
-            .padding(20)
+            .padding(18)
             .background(isPressed ? .white.opacity(0.05) : .clear)
             .contentShape(Rectangle())
         }
@@ -953,131 +365,6 @@ struct PremiumSettingsRow: View {
                 .onChanged { _ in isPressed = true }
                 .onEnded { _ in isPressed = false }
         )
-    }
-}
-
-// MARK: - Premium Button
-
-struct PremiumButton: View {
-    let title: String
-    let icon: String?
-    let style: ButtonStyle
-    let action: () -> Void
-    @State private var isPressed = false
-    @State private var appeared = false
-    
-    enum ButtonStyle {
-        case primary, glass, destructive
-    }
-    
-    var body: some View {
-        Button(action: {
-            let generator = UIImpactFeedbackGenerator(style: .medium)
-            generator.impactOccurred()
-            action()
-        }) {
-            HStack(spacing: 12) {
-                if let icon = icon {
-                    Image(systemName: icon)
-                        .font(.system(size: 18, weight: .semibold))
-                }
-                
-                Text(title)
-                    .font(.system(size: 17, weight: .semibold, design: .rounded))
-            }
-            .foregroundColor(textColor)
-            .frame(maxWidth: .infinity)
-            .frame(height: 56)
-            .background(backgroundView)
-            .cornerRadius(28)
-            .overlay(
-                RoundedRectangle(cornerRadius: 28)
-                    .stroke(borderColor, lineWidth: borderWidth)
-            )
-            .shadow(color: shadowColor, radius: shadowRadius, y: shadowY)
-        }
-        .scaleEffect(isPressed ? 0.96 : (appeared ? 1 : 0.9))
-        .opacity(appeared ? 1 : 0)
-        .onAppear {
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.1)) {
-                appeared = true
-            }
-        }
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in
-                    withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
-                        isPressed = true
-                    }
-                }
-                .onEnded { _ in
-                    withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
-                        isPressed = false
-                    }
-                }
-        )
-    }
-    
-    @ViewBuilder
-    private var backgroundView: some View {
-        switch style {
-        case .primary:
-            LinearGradient(
-                colors: [AppTheme.AccentColors.primary, AppTheme.AccentColors.secondary],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        case .glass:
-            RoundedRectangle(cornerRadius: 28)
-                .fill(.ultraThinMaterial)
-        case .destructive:
-            RoundedRectangle(cornerRadius: 28)
-                .fill(.ultraThinMaterial)
-        }
-    }
-    
-    private var textColor: Color {
-        switch style {
-        case .primary: return .white
-        case .glass: return .white
-        case .destructive: return AppTheme.AccentColors.error
-        }
-    }
-    
-    private var borderColor: Color {
-        switch style {
-        case .primary: return .clear
-        case .glass: return .white.opacity(0.2)
-        case .destructive: return AppTheme.AccentColors.error.opacity(0.5)
-        }
-    }
-    
-    private var borderWidth: CGFloat {
-        switch style {
-        case .primary: return 0
-        case .glass: return 1
-        case .destructive: return 2
-        }
-    }
-    
-    private var shadowColor: Color {
-        switch style {
-        case .primary: return AppTheme.AccentColors.primary.opacity(0.4)
-        case .glass: return .clear
-        case .destructive: return AppTheme.AccentColors.error.opacity(0.2)
-        }
-    }
-    
-    private var shadowRadius: CGFloat {
-        switch style {
-        case .primary: return 20
-        case .glass: return 0
-        case .destructive: return 10
-        }
-    }
-    
-    private var shadowY: CGFloat {
-        return isPressed ? 2 : 8
     }
 }
 
@@ -1208,19 +495,27 @@ struct PremiumEditProfileSheet: View {
                                 )
                         }
                         
-                        ModernTextField(
-                            label: "Status",
-                            placeholder: "What's on your mind?",
-                            text: $status,
-                            icon: "bubble.left.fill"
-                        )
-                        
-                        PremiumButton(
-                            title: "Save Changes",
-                            icon: "checkmark",
-                            style: .primary
-                        ) {
+                        Button {
                             dismiss()
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 14, weight: .semibold))
+                                
+                                Text("Save Changes")
+                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 52)
+                            .background(
+                                LinearGradient(
+                                    colors: [AppTheme.AccentColors.primary, AppTheme.AccentColors.secondary],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .cornerRadius(26)
                         }
                         .padding(.top, 16)
                     }
@@ -1283,23 +578,4 @@ struct ImagePicker: UIViewControllerRepresentable {
             parent.dismiss()
         }
     }
-}
-
-// MARK: - Scroll Offset Preference
-
-struct ScrollOffsetPreferenceKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
-    }
-}
-
-
-
-// MARK: - Helper Functions
-
-private func formatDate(_ date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.dateStyle = .medium
-    return formatter.string(from: date)
 }

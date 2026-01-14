@@ -5,7 +5,7 @@ enum AppRoute: Hashable {
     case login
     case register
     case main
-    case chat(userId: String, name: String)  // Changed from Int to String
+    case chat(userId: String, name: String, avatar: String?, lastActive: Date?)  // Changed from Int to String
     
     // Route metadata
     var title: String {
@@ -14,7 +14,7 @@ enum AppRoute: Hashable {
         case .login: return "Login"
         case .register: return "Register"
         case .main: return "Chats"
-        case .chat(_, let name): return name
+        case .chat(_, let name, _, _): return name
         }
     }
     

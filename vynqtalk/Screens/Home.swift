@@ -238,7 +238,12 @@ struct HomeScreen: View {
         tappedUserId = id
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            nav.push(.chat(userId: id, name: user.name ?? "Chat"))
+            nav.push(.chat(
+                userId: id, 
+                name: user.name ?? "Chat",
+                avatar: user.avatar,
+                lastActive: user.lastActive
+            ))
             tappedUserId = nil
         }
     }
@@ -361,10 +366,40 @@ struct ModernFilterChip: View {
 // MARK: - Modern Chat List Item
 
 struct ModernChatListItem: View {
+    @EnvironmentObject var wsM: WebSocketManager
     let user: User
     var isPressed: Bool = false
     let action: () -> Void
     @State private var appeared = false
+    
+    private var isOnline: Bool {
+        guard let userId = user.id else { return false }
+        return wsM.isUserOnline(userId)
+    }
+    
+    private var lastActiveText: String {
+        guard let lastActive = user.lastActive else { return "" }
+        
+        let now = Date()
+        let interval = now.timeIntervalSince(lastActive)
+        
+        if interval < 60 {
+            return "Active now"
+        } else if interval < 3600 {
+            let minutes = Int(interval / 60)
+            return "\(minutes)m ago"
+        } else if interval < 86400 {
+            let hours = Int(interval / 3600)
+            return "\(hours)h ago"
+        } else if interval < 604800 {
+            let days = Int(interval / 86400)
+            return "\(days)d ago"
+        } else {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMM d"
+            return formatter.string(from: lastActive)
+        }
+    }
     
     var body: some View {
         Button(action: action) {
@@ -375,7 +410,7 @@ struct ModernChatListItem: View {
                         .frame(width: 56, height: 56)
                     
                     // Online indicator
-                    if user.online == true {
+                    if isOnline {
                         Circle()
                             .fill(AppTheme.AccentColors.online)
                             .frame(width: 16, height: 16)
@@ -396,21 +431,37 @@ struct ModernChatListItem: View {
                         
                         Spacer()
                         
-                        Text("2m")
-                            .font(.system(size: 12, weight: .medium, design: .rounded))
-                            .foregroundColor(.white.opacity(0.5))
+                        // Show last active time if not online
+                        if !isOnline && !lastActiveText.isEmpty {
+                            Text(lastActiveText)
+                                .font(.system(size: 12, weight: .medium, design: .rounded))
+                                .foregroundColor(.white.opacity(0.5))
+                        }
                     }
                     
                     HStack {
-                        Text(user.bio ?? user.email ?? "Start a conversation")
-                            .font(.system(size: 14, weight: .medium, design: .rounded))
-                            .foregroundColor(.white.opacity(0.7))
-                            .lineLimit(1)
+                        // Show "Active now" if online, otherwise show bio/email
+                        if isOnline {
+                            HStack(spacing: 6) {
+                                Circle()
+                                    .fill(AppTheme.AccentColors.online)
+                                    .frame(width: 6, height: 6)
+                                
+                                Text("Active now")
+                                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                                    .foregroundColor(AppTheme.AccentColors.online)
+                            }
+                        } else {
+                            Text(user.bio ?? user.email ?? "Start a conversation")
+                                .font(.system(size: 14, weight: .medium, design: .rounded))
+                                .foregroundColor(.white.opacity(0.7))
+                                .lineLimit(1)
+                        }
                         
                         Spacer()
                         
                         // Unread badge (placeholder)
-                        if Int.random(in: 0...10) > 7 {
+                        if let unreadCount = user.unreadMessages?.count, unreadCount > 0 {
                             Circle()
                                 .fill(AppTheme.AccentColors.primary)
                                 .frame(width: 8, height: 8)

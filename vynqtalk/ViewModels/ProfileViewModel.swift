@@ -13,25 +13,30 @@ final class ProfileViewModel: ObservableObject {
 
         do {
             // Try to load user data from the API
-            let userData: User = try await APIClient.shared.makeDirectRequest("/user")
-            user = userData
-            print("✅ Profile loaded successfully: \(userData.name ?? "No name")")
+            let userData: APIResponse<User> = try await APIClient.shared
+                .makeDirectRequest("/user")
+            user = userData.data
+
         } catch {
             print("❌ Profile loading error: \(error)")
             errorMessage = error.localizedDescription
             user = nil
-            
+
             // If API fails, create a fallback user with stored data
             createFallbackUser()
         }
     }
-    
+
     private func createFallbackUser() {
         // Create a fallback user with stored auth data
-        let storedUserId = UserDefaults.standard.string(forKey: "user_id") ?? "unknown"
-        let storedEmail = UserDefaults.standard.string(forKey: "user_email") ?? "user@example.com"
-        let storedName = UserDefaults.standard.string(forKey: "user_name") ?? "User"
-        
+        let storedUserId =
+            UserDefaults.standard.string(forKey: "user_id") ?? "unknown"
+        let storedEmail =
+            UserDefaults.standard.string(forKey: "user_email")
+            ?? "user@example.com"
+        let storedName =
+            UserDefaults.standard.string(forKey: "user_name") ?? "User"
+
         user = User(
             id: storedUserId,
             name: storedName,
@@ -47,9 +52,7 @@ final class ProfileViewModel: ObservableObject {
             unreadMessages: nil,
             online: true
         )
-        
+
         print("📝 Created fallback user: \(storedName)")
     }
 }
-
-

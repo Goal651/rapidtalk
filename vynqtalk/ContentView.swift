@@ -59,8 +59,13 @@ struct ContentView: View {
                 RegisterScreen()
             case .main:
                 MainTabView()
-            case .chat(let userId, let name):
-                ChatScreen(userId: userId, userName: name)
+            case .chat(let userId, let name, let avatar, let lastActive):
+                ChatScreen(
+                    userId: userId, 
+                    userName: name, 
+                    userAvatar: avatar,
+                    initialLastActive: lastActive
+                )
             }
         }
         .transition(
