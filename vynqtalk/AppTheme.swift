@@ -187,3 +187,245 @@ struct GradientConfiguration {
         animates: true
     )
 }
+
+// MARK: - Accessibility
+
+/// Accessibility utilities for WCAG compliance
+extension AppTheme {
+    
+    /// WCAG AA contrast ratio standards
+    struct ContrastStandards {
+        /// Minimum contrast ratio for normal text (4.5:1)
+        static let normalText: Double = 4.5
+        
+        /// Minimum contrast ratio for large text (3:1)
+        /// Large text is defined as 18pt+ regular or 14pt+ bold
+        static let largeText: Double = 3.0
+        
+        /// Enhanced contrast ratio for AAA compliance (7:1)
+        static let enhancedNormalText: Double = 7.0
+        
+        /// Enhanced contrast ratio for large text AAA compliance (4.5:1)
+        static let enhancedLargeText: Double = 4.5
+    }
+    
+    /// Calculate the contrast ratio between two colors
+    /// - Parameters:
+    ///   - foreground: The foreground color (typically text)
+    ///   - background: The background color
+    /// - Returns: The contrast ratio as a Double (1.0 to 21.0)
+    static func contrastRatio(foreground: Color, background: Color) -> Double {
+        let foregroundLuminance = relativeLuminance(of: foreground)
+        let backgroundLuminance = relativeLuminance(of: background)
+        
+        let lighter = max(foregroundLuminance, backgroundLuminance)
+        let darker = min(foregroundLuminance, backgroundLuminance)
+        
+        return (lighter + 0.05) / (darker + 0.05)
+    }
+    
+    /// Check if a color combination meets WCAG AA standards
+    /// - Parameters:
+    ///   - foreground: The foreground color (typically text)
+    ///   - background: The background color
+    ///   - isLargeText: Whether the text is considered large (18pt+ regular or 14pt+ bold)
+    /// - Returns: True if the contrast ratio meets WCAG AA standards
+    static func meetsWCAGAA(foreground: Color, background: Color, isLargeText: Bool = false) -> Bool {
+        let ratio = contrastRatio(foreground: foreground, background: background)
+        let requiredRatio = isLargeText ? ContrastStandards.largeText : ContrastStandards.normalText
+        return ratio >= requiredRatio
+    }
+    
+    /// Check if a color combination meets WCAG AAA standards
+    /// - Parameters:
+    ///   - foreground: The foreground color (typically text)
+    ///   - background: The background color
+    ///   - isLargeText: Whether the text is considered large (18pt+ regular or 14pt+ bold)
+    /// - Returns: True if the contrast ratio meets WCAG AAA standards
+    static func meetsWCAGAAA(foreground: Color, background: Color, isLargeText: Bool = false) -> Bool {
+        let ratio = contrastRatio(foreground: foreground, background: background)
+        let requiredRatio = isLargeText ? ContrastStandards.enhancedLargeText : ContrastStandards.enhancedNormalText
+        return ratio >= requiredRatio
+    }
+    
+    /// Calculate the relative luminance of a color
+    /// - Parameter color: The color to calculate luminance for
+    /// - Returns: The relative luminance value (0.0 to 1.0)
+    private static func relativeLuminance(of color: Color) -> Double {
+        // Convert SwiftUI Color to UIColor to extract RGB components
+        let uiColor = UIColor(color)
+        
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+        
+        uiColor.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        
+        // Apply gamma correction
+        let r = gammaCorrect(red)
+        let g = gammaCorrect(green)
+        let b = gammaCorrect(blue)
+        
+        // Calculate relative luminance using the formula:
+        // L = 0.2126 * R + 0.7152 * G + 0.0722 * B
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+    }
+    
+    /// Apply gamma correction to a color component
+    /// - Parameter component: The color component value (0.0 to 1.0)
+    /// - Returns: The gamma-corrected value
+    private static func gammaCorrect(_ component: CGFloat) -> Double {
+        let value = Double(component)
+        if value <= 0.03928 {
+            return value / 12.92
+        } else {
+            return pow((value + 0.055) / 1.055, 2.4)
+        }
+    }
+    
+    /// Validate all theme color combinations for WCAG AA compliance
+    /// - Returns: Array of validation results with color pairs and their contrast ratios
+    static func validateThemeContrast() -> [ContrastValidationResult] {
+        var results: [ContrastValidationResult] = []
+        
+        // Validate text colors against gradient backgrounds
+        let backgroundColors = [
+            ("Deep Navy Black", GradientColors.deepNavyBlack),
+            ("Midnight Blue", GradientColors.midnightBlue),
+            ("Soft Blue", GradientColors.softBlue)
+        ]
+        
+        let textColors = [
+            ("Primary Text", TextColors.primary, false),
+            ("Secondary Text", TextColors.secondary, false),
+            ("Tertiary Text", TextColors.tertiary, false),
+            ("Disabled Text", TextColors.disabled, false)
+        ]
+        
+        for (bgName, bgColor) in backgroundColors {
+            for (textName, textColor, isLarge) in textColors {
+                let ratio = contrastRatio(foreground: textColor, background: bgColor)
+                let meetsAA = meetsWCAGAA(foreground: textColor, background: bgColor, isLargeText: isLarge)
+                
+                results.append(ContrastValidationResult(
+                    foregroundName: textName,
+                    backgroundName: bgName,
+                    contrastRatio: ratio,
+                    meetsWCAGAA: meetsAA,
+                    isLargeText: isLarge
+                ))
+            }
+        }
+        
+        // Validate accent colors against dark backgrounds
+        let accentColors = [
+            ("Primary Accent", AccentColors.primary),
+            ("Success", AccentColors.success),
+            ("Warning", AccentColors.warning),
+            ("Error", AccentColors.error)
+        ]
+        
+        for (bgName, bgColor) in backgroundColors {
+            for (accentName, accentColor) in accentColors {
+                let ratio = contrastRatio(foreground: accentColor, background: bgColor)
+                let meetsAA = meetsWCAGAA(foreground: accentColor, background: bgColor, isLargeText: false)
+                
+                results.append(ContrastValidationResult(
+                    foregroundName: accentName,
+                    backgroundName: bgName,
+                    contrastRatio: ratio,
+                    meetsWCAGAA: meetsAA,
+                    isLargeText: false
+                ))
+            }
+        }
+        
+        return results
+    }
+    
+    // MARK: - Touch Target Sizes
+    
+    /// Minimum touch target size for iOS (44x44 points)
+    struct TouchTargetSize {
+        /// Minimum width for touch targets (44 points)
+        static let minimumWidth: CGFloat = 44
+        
+        /// Minimum height for touch targets (44 points)
+        static let minimumHeight: CGFloat = 44
+        
+        /// Recommended comfortable touch target size (48 points)
+        static let comfortable: CGFloat = 48
+        
+        /// Large touch target for primary actions (56 points)
+        static let large: CGFloat = 56
+    }
+    
+    /// Check if a size meets minimum touch target requirements
+    /// - Parameters:
+    ///   - width: The width of the touch target
+    ///   - height: The height of the touch target
+    /// - Returns: True if the size meets iOS minimum requirements (44x44)
+    static func meetsTouchTargetSize(width: CGFloat, height: CGFloat) -> Bool {
+        return width >= TouchTargetSize.minimumWidth && height >= TouchTargetSize.minimumHeight
+    }
+    
+    /// Check if a size meets minimum touch target requirements
+    /// - Parameter size: The size of the touch target
+    /// - Returns: True if the size meets iOS minimum requirements (44x44)
+    static func meetsTouchTargetSize(_ size: CGSize) -> Bool {
+        return meetsTouchTargetSize(width: size.width, height: size.height)
+    }
+    
+    /// Get the minimum frame size for a touch target
+    /// - Returns: CGSize with minimum dimensions (44x44)
+    static func minimumTouchTargetFrame() -> CGSize {
+        return CGSize(width: TouchTargetSize.minimumWidth, height: TouchTargetSize.minimumHeight)
+    }
+}
+
+/// Result of a contrast validation check
+struct ContrastValidationResult {
+    let foregroundName: String
+    let backgroundName: String
+    let contrastRatio: Double
+    let meetsWCAGAA: Bool
+    let isLargeText: Bool
+    
+    var description: String {
+        let status = meetsWCAGAA ? "✓ PASS" : "✗ FAIL"
+        let standard = isLargeText ? "3:1" : "4.5:1"
+        return "\(status) \(foregroundName) on \(backgroundName): \(String(format: "%.2f", contrastRatio)):1 (Required: \(standard))"
+    }
+}
+
+// MARK: - Accessibility View Modifiers
+
+extension View {
+    /// Ensures a view meets minimum touch target size requirements
+    /// - Parameters:
+    ///   - minWidth: Minimum width (default: 44 points)
+    ///   - minHeight: Minimum height (default: 44 points)
+    /// - Returns: Modified view with minimum frame size
+    func accessibleTouchTarget(minWidth: CGFloat = 44, minHeight: CGFloat = 44) -> some View {
+        self.frame(minWidth: minWidth, minHeight: minHeight)
+    }
+    
+    /// Applies standard accessibility touch target size (44x44)
+    /// - Returns: Modified view with minimum touch target frame
+    func minimumTouchTarget() -> some View {
+        self.frame(
+            minWidth: AppTheme.TouchTargetSize.minimumWidth,
+            minHeight: AppTheme.TouchTargetSize.minimumHeight
+        )
+    }
+    
+    /// Applies comfortable touch target size (48x48)
+    /// - Returns: Modified view with comfortable touch target frame
+    func comfortableTouchTarget() -> some View {
+        self.frame(
+            minWidth: AppTheme.TouchTargetSize.comfortable,
+            minHeight: AppTheme.TouchTargetSize.comfortable
+        )
+    }
+}

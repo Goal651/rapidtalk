@@ -56,8 +56,11 @@ struct MessageBubble: View {
                         }
                     }
                 )
-                .cornerRadius(18)
+                .cornerRadius(AppTheme.CornerRadius.l)
                 .frame(maxWidth: 260, alignment: isMe ? .trailing : .leading)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(accessibilityDescription)
+                .accessibilityAddTraits(.isStaticText)
 
             if !isMe {
                 // Time for received messages (right side)
@@ -76,5 +79,13 @@ struct MessageBubble: View {
                 appeared = true
             }
         }
+    }
+    
+    private var accessibilityDescription: String {
+        let sender = isMe ? "You" : (message.sender?.name ?? "Unknown")
+        let content = message.content ?? ""
+        let time = formattedTime
+        
+        return "\(sender) said \(content) at \(time)"
     }
 }

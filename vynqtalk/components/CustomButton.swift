@@ -25,6 +25,8 @@ struct CustomButton: View {
     let action: () -> Void
     var isLoading: Bool = false
     var isDisabled: Bool = false
+    var accessibilityLabel: String? = nil
+    var accessibilityHint: String? = nil
     
     // MARK: - State
     
@@ -81,6 +83,10 @@ struct CustomButton: View {
                 }
         )
         .disabled(isDisabled || isLoading)
+        .accessibilityLabel(accessibilityLabel ?? title)
+        .accessibilityHint(accessibilityHint ?? "")
+        .accessibilityAddTraits(isDisabled ? .isButton : [.isButton])
+        .accessibilityRemoveTraits(isDisabled ? [] : [])
     }
     
     // MARK: - Computed Properties

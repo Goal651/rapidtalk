@@ -37,95 +37,106 @@ struct RegisterScreen: View {
     }
     
     var body: some View {
-        ZStack {
-            // Animated Gradient Background
-            AnimatedGradientBackground(configuration: .primary)
+        GeometryReader { geometry in
+            let spacing = ResponsiveSpacing(screenWidth: geometry.size.width)
+            let isLandscape = geometry.size.width > geometry.size.height
             
-            ScrollView {
-                VStack(spacing: AppTheme.Spacing.l) {
-                    // Title Section
-                    VStack(spacing: AppTheme.Spacing.s) {
-                        Text("Create your account")
-                            .font(AppTheme.Typography.title3)
-                            .foregroundColor(AppTheme.TextColors.secondary)
+            ZStack {
+                // Animated Gradient Background
+                AnimatedGradientBackground(configuration: .primary)
+                
+                ScrollView {
+                    VStack(spacing: spacing.formSpacing) {
+                        // Title Section
+                        VStack(spacing: AppTheme.Spacing.s) {
+                            Text("Create your account")
+                                .font(isLandscape ? AppTheme.Typography.body : AppTheme.Typography.title3)
+                                .foregroundColor(AppTheme.TextColors.secondary)
+                            
+                            Text("Register")
+                                .font(isLandscape ? AppTheme.Typography.title : AppTheme.Typography.largeTitle)
+                                .foregroundColor(AppTheme.TextColors.primary)
+                        }
+                        .padding(.top, isLandscape ? AppTheme.Spacing.m : spacing.topPadding)
                         
-                        Text("Register")
-                            .font(AppTheme.Typography.largeTitle)
-                            .foregroundColor(AppTheme.TextColors.primary)
+                        // Name Field
+                        CustomTextField(
+                            label: "Name",
+                            placeholder: "Enter your name",
+                            text: $name,
+                            keyboardType: .default
+                        )
+                        .padding(.horizontal, spacing.horizontalPadding)
+                        
+                        // Email Field with Validation
+                        CustomTextField(
+                            label: "Email",
+                            placeholder: "Enter your email",
+                            text: $email,
+                            keyboardType: .emailAddress,
+                            validation: isValidEmail,
+                            errorMessage: "Invalid email format"
+                        )
+                        .padding(.horizontal, spacing.horizontalPadding)
+                        
+                        // Password Field
+                        CustomTextField(
+                            label: "Password",
+                            placeholder: "Enter password",
+                            text: $password,
+                            isSecure: true
+                        )
+                        .padding(.horizontal, spacing.horizontalPadding)
+                        
+                        // Confirm Password Field with Match Validation
+                        CustomTextField(
+                            label: "Confirm Password",
+                            placeholder: "Re-enter password",
+                            text: $confirmPassword,
+                            isSecure: true,
+                            validation: { _ in passwordsMatch },
+                            errorMessage: "Passwords do not match"
+                        )
+                        .padding(.horizontal, spacing.horizontalPadding)
+                        
+                        // Register Button
+                        CustomButton(
+                            title: "Register",
+                            style: .primary,
+                            action: handleRegister,
+                            isLoading: isLoading,
+                            isDisabled: !isFormValid
+                        )
+                        .padding(.horizontal, spacing.horizontalPadding)
+                        .padding(.top, AppTheme.Spacing.m)
+                        .padding(.bottom, isLandscape ? AppTheme.Spacing.m : 0)
+                        
+                        if !isLandscape {
+                            Spacer()
+                        }
                     }
-                    .padding(.top, AppTheme.Spacing.xxl)
-                    
-                    // Name Field
-                    CustomTextField(
-                        label: "Name",
-                        placeholder: "Enter your name",
-                        text: $name,
-                        keyboardType: .default
-                    )
-                    .padding(.horizontal, AppTheme.Spacing.xl)
-                    
-                    // Email Field with Validation
-                    CustomTextField(
-                        label: "Email",
-                        placeholder: "Enter your email",
-                        text: $email,
-                        keyboardType: .emailAddress,
-                        validation: isValidEmail,
-                        errorMessage: "Invalid email format"
-                    )
-                    .padding(.horizontal, AppTheme.Spacing.xl)
-                    
-                    // Password Field
-                    CustomTextField(
-                        label: "Password",
-                        placeholder: "Enter password",
-                        text: $password,
-                        isSecure: true
-                    )
-                    .padding(.horizontal, AppTheme.Spacing.xl)
-                    
-                    // Confirm Password Field with Match Validation
-                    CustomTextField(
-                        label: "Confirm Password",
-                        placeholder: "Re-enter password",
-                        text: $confirmPassword,
-                        isSecure: true,
-                        validation: { _ in passwordsMatch },
-                        errorMessage: "Passwords do not match"
-                    )
-                    .padding(.horizontal, AppTheme.Spacing.xl)
-                    
-                    // Register Button
-                    CustomButton(
-                        title: "Register",
-                        style: .primary,
-                        action: handleRegister,
-                        isLoading: isLoading,
-                        isDisabled: !isFormValid
-                    )
-                    .padding(.horizontal, AppTheme.Spacing.xl)
-                    .padding(.top, AppTheme.Spacing.m)
-                    
-                    Spacer()
+                    .frame(maxWidth: spacing.contentMaxWidth)
+                    .frame(width: geometry.size.width)
+                    .frame(minHeight: geometry.size.height)
                 }
-            }
-            
-            // Success Modal
-            if showSuccessModal {
-                RegisterSuccessModal(
-                    userName: name,
-                    onDismiss: {
-                        withAnimation(AppTheme.AnimationCurves.easeOut) {
-                            showSuccessModal = false
+                
+                // Success Modal
+                if showSuccessModal {
+                    RegisterSuccessModal(
+                        userName: name,
+                        onDismiss: {
+                            withAnimation(AppTheme.AnimationCurves.easeOut) {
+                                showSuccessModal = false
+                            }
+                            // Navigate to Home Screen after modal dismisses
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                nav.reset(to: .main)
+                            }
                         }
-                        // Navigate to Home Screen after modal dismisses
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                            nav.reset(to: .main)
-                        }
-                    }
-                )
-                .transition(.scale.combined(with: .opacity))
-                .zIndex(1)
+                    )
+                    .transition(.scale.combined(with: .opacity))
+                    .zIndex(1)
+                }
             }
         }
         .navigationBarBackButtonHidden()

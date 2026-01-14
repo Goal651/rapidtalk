@@ -23,6 +23,10 @@ struct LoadingView: View {
     var style: Style = .spinner
     var color: Color = AppTheme.TextColors.primary
     
+    // MARK: - State
+    
+    @State private var appeared: Bool = false
+    
     // MARK: - Body
     
     var body: some View {
@@ -38,6 +42,7 @@ struct LoadingView: View {
                     PulseView(color: color)
                 }
             }
+            .accessibilityLabel("Loading")
             
             // Optional message
             if let message = message {
@@ -45,8 +50,17 @@ struct LoadingView: View {
                     .font(AppTheme.Typography.subheadline)
                     .foregroundColor(AppTheme.TextColors.secondary)
                     .multilineTextAlignment(.center)
+                    .accessibilityLabel(message)
             }
         }
+        .opacity(appeared ? 1 : 0)
+        .scaleEffect(appeared ? 1 : 0.8)
+        .onAppear {
+            withAnimation(AppTheme.AnimationCurves.componentAppearance) {
+                appeared = true
+            }
+        }
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -84,6 +98,7 @@ private struct DotsView: View {
                     )
             }
         }
+        .drawingGroup() // Optimize repeated animation
         .onAppear {
             animationPhase = 1
         }
@@ -119,6 +134,7 @@ private struct PulseView: View {
                 .frame(width: 40, height: 40)
                 .scaleEffect(isPulsing ? 0.9 : 1.0)
         }
+        .drawingGroup() // Optimize complex pulse animation
         .onAppear {
             withAnimation(
                 .easeInOut(duration: 1.5)

@@ -48,6 +48,7 @@ struct RegisterSuccessModal: View {
                 .scaleEffect(checkmarkScale)
                 .rotationEffect(.degrees(checkmarkRotation))
                 .opacity(checkmarkOpacity)
+                .drawingGroup() // Optimize checkmark animation
                 
                 // Title
                 Text("Account Created!")

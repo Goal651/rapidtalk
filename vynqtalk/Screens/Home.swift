@@ -13,7 +13,7 @@ struct HomeScreen: View {
     @EnvironmentObject var nav: NavigationCoordinator
     
     @State private var searchText: String = ""
-    @State private var tappedUserId: String? = nil
+    @State private var tappedUserId: Int? = nil
     
     var filteredUsers: [User] {
         if searchText.isEmpty {
@@ -28,90 +28,121 @@ struct HomeScreen: View {
     }
     
     var body: some View {
-        ZStack {
-            // Animated gradient background
-            AnimatedGradientBackground()
-            
-            VStack(alignment: .leading, spacing: 0) {
-                // Header Section
-                VStack(alignment: .leading, spacing: AppTheme.Spacing.m) {
-                    // Title
-                    Text("Chats")
-                        .font(AppTheme.Typography.largeTitle)
-                        .foregroundColor(AppTheme.TextColors.primary)
-                        .padding(.horizontal, AppTheme.Spacing.l)
-                        .padding(.top, AppTheme.Spacing.xl)
-                    
-                    // Search Bar
-                    HStack(spacing: AppTheme.Spacing.s) {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundColor(AppTheme.TextColors.tertiary)
-                            .font(.system(size: AppTheme.FontSizes.body))
-                        
-                        TextField("Search chats...", text: $searchText)
-                            .font(AppTheme.Typography.body)
-                            .foregroundColor(AppTheme.TextColors.primary)
-                            .accentColor(AppTheme.AccentColors.primary)
-                        
-                        if !searchText.isEmpty {
-                            Button(action: {
-                                searchText = ""
-                            }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(AppTheme.TextColors.tertiary)
-                                    .font(.system(size: AppTheme.FontSizes.body))
-                            }
-                        }
-                    }
-                    .padding(.horizontal, AppTheme.Spacing.m)
-                    .padding(.vertical, AppTheme.Spacing.m)
-                    .background(AppTheme.SurfaceColors.surfaceLight)
-                    .cornerRadius(AppTheme.CornerRadius.m)
-                    .padding(.horizontal, AppTheme.Spacing.l)
-                }
-                .padding(.bottom, AppTheme.Spacing.m)
-                
-                // User/Chat list
-                ScrollView {
-                    VStack(spacing: AppTheme.Spacing.m) {
-                        if userVM.isLoading {
-                            LoadingView(message: "Loading chats...", style: .spinner)
-                                .padding(.top, AppTheme.Spacing.xl)
-                        } else if let err = userVM.errorMessage {
-                            Text(err)
-                                .font(AppTheme.Typography.body)
-                                .foregroundColor(AppTheme.AccentColors.error)
-                                .padding(.top, AppTheme.Spacing.xl)
-                        } else if filteredUsers.isEmpty {
-                            EmptyStateView()
-                        } else {
-                            ForEach(filteredUsers) { user in
-                                ChatListItem(user: user, isPressed: tappedUserId == user.id)
-                                    .onTapGesture {
-                                        guard let id = user.id else { return }
-                                        // Trigger tap animation
-                                        tappedUserId = id
-                                        
-                                        // Navigate after brief delay for animation
-                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                            nav.push(.chat(userId: id, name: user.name ?? "Chat"))
-                                            tappedUserId = nil
-                                        }
-                                    }
-                            }
-                        }
-                    }
-                    .padding(.horizontal, AppTheme.Spacing.l)
-                    .padding(.top, AppTheme.Spacing.s)
-                    .padding(.bottom, AppTheme.Spacing.xl)
-                }
-                
-                Spacer(minLength: 0)
-            }
+        GeometryReader { geometry in
+            homeContent(geometry: geometry)
         }
         .navigationBarBackButtonHidden()
         .task {
             await userVM.loadUsers()
+        }
+    }
+    
+    // MARK: - View Builders
+    
+    @ViewBuilder
+    private func homeContent(geometry: GeometryProxy) -> some View {
+        let spacing = ResponsiveSpacing(screenWidth: geometry.size.width)
+        let isLandscape = geometry.size.width > geometry.size.height
+        
+        ZStack {
+            AnimatedGradientBackground()
+            
+            VStack(alignment: .leading, spacing: 0) {
+                headerSection(spacing: spacing, isLandscape: isLandscape)
+                chatListSection(spacing: spacing, isLandscape: isLandscape)
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: spacing.contentMaxWidth)
+            .frame(width: geometry.size.width)
+        }
+    }
+    
+    @ViewBuilder
+    private func headerSection(spacing: ResponsiveSpacing, isLandscape: Bool) -> some View {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.m) {
+            // Title
+            Text("Chats")
+                .font(isLandscape ? AppTheme.Typography.title : AppTheme.Typography.largeTitle)
+                .foregroundColor(AppTheme.TextColors.primary)
+                .padding(.horizontal, spacing.horizontalPadding)
+                .padding(.top, isLandscape ? AppTheme.Spacing.m : spacing.topPadding)
+            
+            // Search Bar
+            searchBar(spacing: spacing)
+        }
+        .padding(.bottom, AppTheme.Spacing.m)
+    }
+    
+    @ViewBuilder
+    private func searchBar(spacing: ResponsiveSpacing) -> some View {
+        HStack(spacing: AppTheme.Spacing.s) {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(AppTheme.TextColors.tertiary)
+                .font(.system(size: AppTheme.FontSizes.body))
+            
+            TextField("Search chats...", text: $searchText)
+                .font(AppTheme.Typography.body)
+                .foregroundColor(AppTheme.TextColors.primary)
+                .accentColor(AppTheme.AccentColors.primary)
+            
+            if !searchText.isEmpty {
+                Button(action: {
+                    searchText = ""
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(AppTheme.TextColors.tertiary)
+                        .font(.system(size: AppTheme.FontSizes.body))
+                }
+            }
+        }
+        .padding(.horizontal, AppTheme.Spacing.m)
+        .padding(.vertical, AppTheme.Spacing.m)
+        .background(AppTheme.SurfaceColors.surfaceLight)
+        .cornerRadius(AppTheme.CornerRadius.m)
+        .padding(.horizontal, spacing.horizontalPadding)
+    }
+    
+    @ViewBuilder
+    private func chatListSection(spacing: ResponsiveSpacing, isLandscape: Bool) -> some View {
+        ScrollView {
+            VStack(spacing: isLandscape ? AppTheme.Spacing.s : AppTheme.Spacing.m) {
+                if userVM.isLoading {
+                    LoadingView(message: "Loading chats...", style: .spinner)
+                        .padding(.top, AppTheme.Spacing.xl)
+                } else if let err = userVM.errorMessage {
+                    Text(err)
+                        .font(AppTheme.Typography.body)
+                        .foregroundColor(AppTheme.AccentColors.error)
+                        .padding(.top, AppTheme.Spacing.xl)
+                } else if filteredUsers.isEmpty {
+                    EmptyStateView()
+                } else {
+                    chatListItems(isLandscape: isLandscape)
+                }
+            }
+            .padding(.horizontal, spacing.horizontalPadding)
+            .padding(.top, AppTheme.Spacing.s)
+            .padding(.bottom, spacing.bottomPadding)
+        }
+    }
+    
+    @ViewBuilder
+    private func chatListItems(isLandscape: Bool) -> some View {
+        ForEach(filteredUsers) { user in
+            ChatListItem(user: user, isPressed: tappedUserId == user.id, isCompact: isLandscape)
+                .onTapGesture {
+                    handleChatTap(user: user)
+                }
+        }
+    }
+    
+    private func handleChatTap(user: User) {
+        guard let id = user.id else { return }
+        tappedUserId = id
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            nav.push(.chat(userId: id, name: user.name ?? "Chat"))
+            tappedUserId = nil
         }
     }
 }
@@ -121,6 +152,7 @@ struct HomeScreen: View {
 struct ChatListItem: View {
     let user: User
     var isPressed: Bool = false
+    var isCompact: Bool = false
     
     var body: some View {
         HStack(spacing: AppTheme.Spacing.m) {
@@ -145,7 +177,7 @@ struct ChatListItem: View {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
                 HStack {
                     Text(user.name ?? "Unknown User")
-                        .font(AppTheme.Typography.headline)
+                        .font(isCompact ? AppTheme.Typography.body : AppTheme.Typography.headline)
                         .foregroundColor(AppTheme.TextColors.primary)
                     
                     Spacer()
@@ -159,7 +191,7 @@ struct ChatListItem: View {
                 HStack {
                     // Last message preview (using bio as placeholder)
                     Text(user.bio ?? user.email ?? "Start a conversation")
-                        .font(AppTheme.Typography.subheadline)
+                        .font(isCompact ? AppTheme.Typography.caption : AppTheme.Typography.subheadline)
                         .foregroundColor(AppTheme.TextColors.secondary)
                         .lineLimit(1)
                     
@@ -172,7 +204,7 @@ struct ChatListItem: View {
             }
         }
         .padding(.horizontal, AppTheme.Spacing.m)
-        .padding(.vertical, AppTheme.Spacing.m)
+        .padding(.vertical, isCompact ? AppTheme.Spacing.s : AppTheme.Spacing.m)
         .background(AppTheme.SurfaceColors.surfaceLight)
         .cornerRadius(AppTheme.CornerRadius.l)
         .scaleEffect(isPressed ? 0.98 : 1.0)
@@ -261,6 +293,7 @@ struct EmptyStateView: View {
 
 struct UnreadBadge: View {
     let count: Int
+    @State private var appeared: Bool = false
     
     var body: some View {
         if count > 0 {
@@ -272,6 +305,12 @@ struct UnreadBadge: View {
                 .background(AppTheme.AccentColors.primary)
                 .clipShape(Capsule())
                 .frame(minWidth: 20, minHeight: 20)
+                .scaleEffect(appeared ? 1 : 0)
+                .onAppear {
+                    withAnimation(AppTheme.AnimationCurves.spring) {
+                        appeared = true
+                    }
+                }
         }
     }
 }

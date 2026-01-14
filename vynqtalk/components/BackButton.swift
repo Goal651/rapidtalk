@@ -28,5 +28,9 @@ struct BackButton: View {
         }
         .foregroundColor(AppTheme.TextColors.primary)
         .padding(.leading, AppTheme.Spacing.m)
+        .minimumTouchTarget() // Ensure minimum 44x44 touch target
+        .accessibilityLabel("Back")
+        .accessibilityHint("Returns to the previous screen")
+        .accessibilityAddTraits(.isButton)
     }
 }

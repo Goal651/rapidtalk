@@ -55,6 +55,7 @@ struct ToastNotification: View {
     
     @State private var offset: CGFloat = -100
     @State private var dragOffset: CGFloat = 0
+    @State private var opacity: Double = 0
     
     // MARK: - Body
     
@@ -91,6 +92,7 @@ struct ToastNotification: View {
         )
         .padding(.horizontal, AppTheme.Spacing.m)
         .offset(y: offset + dragOffset)
+        .opacity(opacity)
         .gesture(
             DragGesture()
                 .onChanged { gesture in
@@ -112,9 +114,10 @@ struct ToastNotification: View {
                 }
         )
         .onAppear {
-            // Slide in animation
+            // Slide in animation with fade
             withAnimation(AppTheme.AnimationCurves.spring) {
                 offset = 60
+                opacity = 1
             }
             
             // Auto-dismiss after duration
@@ -129,6 +132,7 @@ struct ToastNotification: View {
     private func dismiss() {
         withAnimation(AppTheme.AnimationCurves.spring) {
             offset = -100
+            opacity = 0
         }
         
         // Call onDismiss callback after animation

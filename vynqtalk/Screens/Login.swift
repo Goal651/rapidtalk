@@ -23,94 +23,107 @@ struct LoginScreen: View {
     }
     
     var body: some View {
-        ZStack {
-            // AnimatedGradientBackground
-            AnimatedGradientBackground()
-                .ignoresSafeArea()
+        GeometryReader { geometry in
+            let spacing = ResponsiveSpacing(screenWidth: geometry.size.width)
+            let isLandscape = geometry.size.width > geometry.size.height
             
-            // Main content
-            VStack(spacing: AppTheme.Spacing.xl) {
-                // Title
-                VStack(spacing: AppTheme.Spacing.s) {
-                    Text("Welcome Back")
-                        .font(AppTheme.Typography.title2)
-                        .foregroundColor(AppTheme.TextColors.secondary)
-                    
-                    Text("Login")
-                        .font(AppTheme.Typography.largeTitle)
-                        .foregroundColor(AppTheme.TextColors.primary)
-                }
-                .padding(.top, AppTheme.Spacing.xxl)
+            ZStack {
+                // AnimatedGradientBackground
+                AnimatedGradientBackground()
+                    .ignoresSafeArea()
                 
-                // Email Input
-                CustomTextField(
-                    label: "Email",
-                    placeholder: "Enter your email",
-                    text: $email,
-                    keyboardType: .emailAddress,
-                    validation: isValidEmail,
-                    errorMessage: "Invalid email format"
-                )
-                .padding(.horizontal, AppTheme.Spacing.xl)
-                
-                // Password Input
-                CustomTextField(
-                    label: "Password",
-                    placeholder: "Enter your password",
-                    text: $password,
-                    isSecure: true
-                )
-                .padding(.horizontal, AppTheme.Spacing.xl)
-                
-                // Login button
-                CustomButton(
-                    title: "Login",
-                    style: .primary,
-                    action: {
-                        Task {
-                            isLoading = true
-                            let ok = await authVM.login(email: email, password: password)
-                            isLoading = false
+                // Main content
+                ScrollView {
+                    VStack(spacing: spacing.formSpacing) {
+                        // Title
+                        VStack(spacing: AppTheme.Spacing.s) {
+                            Text("Welcome Back")
+                                .font(isLandscape ? AppTheme.Typography.title3 : AppTheme.Typography.title2)
+                                .foregroundColor(AppTheme.TextColors.secondary)
                             
-                            if ok {
-                                wsM.connect()
-                            } else {
-                                modalTitle = "Login Failed"
-                                modalDescription = "Please check your email/password and try again."
-                                withAnimation { showModal = true }
-                            }
+                            Text("Login")
+                                .font(isLandscape ? AppTheme.Typography.title : AppTheme.Typography.largeTitle)
+                                .foregroundColor(AppTheme.TextColors.primary)
                         }
-                    },
-                    isLoading: isLoading,
-                    isDisabled: email.isEmpty || password.isEmpty || !isValidEmail(email)
-                )
-                .padding(.horizontal, AppTheme.Spacing.xl)
-                .padding(.top, AppTheme.Spacing.m)
-                
-                // Forgot password
-                Button(action: {}) {
-                    Text("Forgot Password?")
-                        .font(AppTheme.Typography.footnote)
-                        .foregroundColor(AppTheme.TextColors.secondary)
-                }
-                .padding(.top, AppTheme.Spacing.s)
-                
-                Spacer()
-            }
-            
-            // Modal overlay
-            if showModal {
-                ModalView(
-                    title: modalTitle,
-                    description: modalDescription,
-                    onClose: { 
-                        withAnimation {
-                            showModal = false
+                        .padding(.top, isLandscape ? AppTheme.Spacing.m : spacing.topPadding)
+                        
+                        // Email Input
+                        CustomTextField(
+                            label: "Email",
+                            placeholder: "Enter your email",
+                            text: $email,
+                            keyboardType: .emailAddress,
+                            validation: isValidEmail,
+                            errorMessage: "Invalid email format"
+                        )
+                        .padding(.horizontal, spacing.horizontalPadding)
+                        
+                        // Password Input
+                        CustomTextField(
+                            label: "Password",
+                            placeholder: "Enter your password",
+                            text: $password,
+                            isSecure: true
+                        )
+                        .padding(.horizontal, spacing.horizontalPadding)
+                        
+                        // Login button
+                        CustomButton(
+                            title: "Login",
+                            style: .primary,
+                            action: {
+                                Task {
+                                    isLoading = true
+                                    let ok = await authVM.login(email: email, password: password)
+                                    isLoading = false
+                                    
+                                    if ok {
+                                        wsM.connect()
+                                    } else {
+                                        modalTitle = "Login Failed"
+                                        modalDescription = "Please check your email/password and try again."
+                                        withAnimation { showModal = true }
+                                    }
+                                }
+                            },
+                            isLoading: isLoading,
+                            isDisabled: email.isEmpty || password.isEmpty || !isValidEmail(email)
+                        )
+                        .padding(.horizontal, spacing.horizontalPadding)
+                        .padding(.top, AppTheme.Spacing.m)
+                        
+                        // Forgot password
+                        Button(action: {}) {
+                            Text("Forgot Password?")
+                                .font(AppTheme.Typography.footnote)
+                                .foregroundColor(AppTheme.TextColors.secondary)
+                        }
+                        .padding(.top, AppTheme.Spacing.s)
+                        .padding(.bottom, isLandscape ? AppTheme.Spacing.m : 0)
+                        
+                        if !isLandscape {
+                            Spacer()
                         }
                     }
-                )
-                .transition(.scale.combined(with: .opacity))
-                .zIndex(1)
+                    .frame(maxWidth: spacing.contentMaxWidth)
+                    .frame(width: geometry.size.width)
+                    .frame(minHeight: geometry.size.height)
+                }
+                
+                // Modal overlay
+                if showModal {
+                    ModalView(
+                        title: modalTitle,
+                        description: modalDescription,
+                        onClose: { 
+                            withAnimation {
+                                showModal = false
+                            }
+                        }
+                    )
+                    .transition(.scale.combined(with: .opacity))
+                    .zIndex(1)
+                }
             }
         }
         .navigationBarBackButtonHidden()

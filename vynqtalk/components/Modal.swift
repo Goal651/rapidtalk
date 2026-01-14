@@ -11,11 +11,14 @@ struct ModalView: View {
     var description: String
     var onClose: () -> Void
     
+    @State private var appeared: Bool = false
+    
     var body: some View {
         ZStack {
             // Blur layer only
             AppTheme.GradientColors.deepNavyBlack.opacity(0.4)
                 .ignoresSafeArea()
+                .opacity(appeared ? 1 : 0)
                 .onTapGesture {
                     onClose() // dismiss when tapping outside
                 }
@@ -52,6 +55,13 @@ struct ModalView: View {
                     .shadow(color: AppTheme.GradientColors.deepNavyBlack.opacity(0.5), radius: 20, y: 10)
             )
             .padding(.horizontal, AppTheme.Spacing.xl)
+            .scaleEffect(appeared ? 1 : 0.8)
+            .opacity(appeared ? 1 : 0)
+        }
+        .onAppear {
+            withAnimation(AppTheme.AnimationCurves.spring) {
+                appeared = true
+            }
         }
     }
 }

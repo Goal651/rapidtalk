@@ -73,6 +73,7 @@ struct AnimatedGradientBackground: View {
                 }
             }
         }
+        .drawingGroup() // Optimize complex gradient animations
     }
 }
 

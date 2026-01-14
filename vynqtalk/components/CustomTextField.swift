@@ -18,6 +18,7 @@ struct CustomTextField: View {
     var isSecure: Bool = false
     var validation: ((String) -> Bool)? = nil
     var errorMessage: String? = nil
+    var accessibilityHint: String? = nil
     
     // MARK: - State
     
@@ -46,6 +47,8 @@ struct CustomTextField: View {
                         .onChange(of: text) { _ in
                             validateIfNeeded()
                         }
+                        .accessibilityLabel(label)
+                        .accessibilityHint(accessibilityHint ?? "Secure text entry for \(label.lowercased())")
                 } else {
                     TextField(placeholder, text: $text)
                         .font(AppTheme.Typography.body)
@@ -56,6 +59,9 @@ struct CustomTextField: View {
                         .onChange(of: text) { _ in
                             validateIfNeeded()
                         }
+                        .accessibilityLabel(label)
+                        .accessibilityHint(accessibilityHint ?? "Text entry for \(label.lowercased())")
+                        .accessibilityValue(text.isEmpty ? "Empty" : text)
                 }
                 
                 // Clear button
@@ -69,6 +75,8 @@ struct CustomTextField: View {
                             .foregroundColor(AppTheme.TextColors.tertiary)
                             .font(.system(size: 16))
                     }
+                    .accessibilityLabel("Clear \(label.lowercased())")
+                    .accessibilityHint("Clears the text in the \(label.lowercased()) field")
                     .transition(.scale.combined(with: .opacity))
                 }
             }

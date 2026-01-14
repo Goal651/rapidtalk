@@ -9,11 +9,12 @@ import SwiftUI
 
 struct TypingIndicator: View {
     @State private var animationPhase: CGFloat = 0
+    @State private var appeared: Bool = false
     
     var body: some View {
         HStack(alignment: .bottom, spacing: AppTheme.Spacing.s) {
             // Typing indicator bubble
-            HStack(spacing: 6) {
+            HStack(spacing: AppTheme.Spacing.xs) {
                 ForEach(0..<3) { index in
                     Circle()
                         .fill(AppTheme.TextColors.secondary)
@@ -21,16 +22,24 @@ struct TypingIndicator: View {
                         .offset(y: dotOffset(for: index))
                 }
             }
+            .drawingGroup() // Optimize repeated dot animation
             .padding(.horizontal, AppTheme.Spacing.m)
-            .padding(.vertical, 12)
+            .padding(.vertical, AppTheme.Spacing.m)
             .background(AppTheme.SurfaceColors.surfaceMedium)
-            .cornerRadius(18)
+            .cornerRadius(AppTheme.CornerRadius.l)
             .frame(maxWidth: 260, alignment: .leading)
             
             Spacer()
         }
+        .opacity(appeared ? 1 : 0)
+        .offset(x: appeared ? 0 : -20)
         .onAppear {
-            // Start continuous animation
+            // Fade in animation
+            withAnimation(AppTheme.AnimationCurves.componentAppearance) {
+                appeared = true
+            }
+            
+            // Start continuous dot animation
             withAnimation(
                 .easeInOut(duration: 1.2)
                 .repeatForever(autoreverses: false)

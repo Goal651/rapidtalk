@@ -24,6 +24,7 @@ struct UserComponent: View {
                         Circle()
                             .frame(width: 8, height: 8)
                             .foregroundColor(AppTheme.AccentColors.success)
+                            .accessibilityLabel("Online")
                     }
                 }
 
@@ -53,6 +54,32 @@ struct UserComponent: View {
         .padding(.horizontal, AppTheme.Spacing.m)
         .background(AppTheme.SurfaceColors.surfaceLight)
         .cornerRadius(AppTheme.CornerRadius.l)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityDescription)
+    }
+    
+    private var accessibilityDescription: String {
+        var description = user.name ?? "Unknown User"
+        
+        if user.online == true {
+            description += ", online"
+        } else {
+            description += ", offline"
+        }
+        
+        if let email = user.email, !email.isEmpty {
+            description += ", \(email)"
+        }
+        
+        if let bio = user.bio, !bio.isEmpty {
+            description += ", \(bio)"
+        }
+        
+        if let status = user.status, !status.isEmpty {
+            description += ", status: \(status)"
+        }
+        
+        return description
     }
 
     @ViewBuilder
