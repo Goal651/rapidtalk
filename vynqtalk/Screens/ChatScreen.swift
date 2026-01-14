@@ -23,6 +23,7 @@ struct ChatScreen: View {
     @State private var showMediaPicker = false
     @State private var selectedMedia: MediaItem?
     @State private var isUploadingMedia = false
+    @State private var scrollProxy: ScrollViewProxy?
     let userId: String  // Changed from Int to String
     let userName: String
     let userAvatar: String?
@@ -284,44 +285,74 @@ struct ChatScreen: View {
     // MARK: - Messages Section
     
     private func messagesSection(spacing: ResponsiveSpacing) -> some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                if messageVM.isLoading {
-                    LoadingView(style: .spinner)
-                        .padding(.top, 32)
-                }
-                if let err = messageVM.errorMessage {
-                    Text(err)
-                        .foregroundColor(AppTheme.AccentColors.error)
-                        .font(AppTheme.Typography.body)
-                        .padding(.top, 32)
-                }
-                ForEach(messageVM.messages) { message in
-                    MessageBubble(message: message)
-                }
-                
-                // Show uploading indicator
-                if isUploadingMedia {
-                    HStack(spacing: 12) {
-                        ProgressView()
-                            .tint(AppTheme.AccentColors.primary)
-                        Text("Uploading...")
-                            .font(AppTheme.Typography.caption)
-                            .foregroundColor(AppTheme.TextColors.secondary)
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(spacing: 16) {
+                    if messageVM.isLoading {
+                        LoadingView(style: .spinner)
+                            .padding(.top, 32)
                     }
-                    .padding(AppTheme.Spacing.m)
-                    .background(
-                        RoundedRectangle(cornerRadius: AppTheme.CornerRadius.l)
-                            .fill(AppTheme.SurfaceColors.surface)
-                    )
+                    if let err = messageVM.errorMessage {
+                        Text(err)
+                            .foregroundColor(AppTheme.AccentColors.error)
+                            .font(AppTheme.Typography.body)
+                            .padding(.top, 32)
+                    }
+                    ForEach(messageVM.messages) { message in
+                        MessageBubble(message: message)
+                            .id(message.id)
+                    }
+                    
+                    // Show uploading indicator
+                    if isUploadingMedia {
+                        HStack(spacing: 12) {
+                            ProgressView()
+                                .tint(AppTheme.AccentColors.primary)
+                            Text("Uploading...")
+                                .font(AppTheme.Typography.caption)
+                                .foregroundColor(AppTheme.TextColors.secondary)
+                        }
+                        .padding(AppTheme.Spacing.m)
+                        .background(
+                            RoundedRectangle(cornerRadius: AppTheme.CornerRadius.l)
+                                .fill(AppTheme.SurfaceColors.surface)
+                        )
+                        .id("uploading")
+                    }
+                    
+                    if isOtherUserTyping {
+                        TypingIndicator()
+                            .id("typing")
+                    }
+                    
+                    // Invisible anchor at the bottom
+                    Color.clear
+                        .frame(height: 1)
+                        .id("bottom")
                 }
-                
-                if isOtherUserTyping {
-                    TypingIndicator()
-                }
+                .padding(.horizontal, spacing.horizontalPadding)
+                .padding(.vertical, 20)
             }
-            .padding(.horizontal, spacing.horizontalPadding)
-            .padding(.vertical, 20)
+            .onAppear {
+                scrollProxy = proxy
+                scrollToBottom(proxy: proxy)
+            }
+            .onChange(of: messageVM.messages.count) { _, _ in
+                scrollToBottom(proxy: proxy)
+            }
+            .onChange(of: isOtherUserTyping) { _, _ in
+                scrollToBottom(proxy: proxy)
+            }
+        }
+    }
+    
+    private func scrollToBottom(proxy: ScrollViewProxy, animated: Bool = true) {
+        if animated {
+            withAnimation(.easeOut(duration: 0.3)) {
+                proxy.scrollTo("bottom", anchor: .bottom)
+            }
+        } else {
+            proxy.scrollTo("bottom", anchor: .bottom)
         }
     }
     
@@ -368,6 +399,11 @@ struct ChatScreen: View {
                 type: .text
             )
             messageText = ""
+            
+            // Scroll to bottom after sending
+            if let proxy = scrollProxy {
+                scrollToBottom(proxy: proxy)
+            }
         } label: {
             Image(systemName: "paperplane.fill")
                 .foregroundColor(.white)
