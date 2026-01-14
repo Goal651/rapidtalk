@@ -12,13 +12,9 @@ final class ProfileViewModel: ObservableObject {
         defer { isLoading = false }
 
         do {
-            let response: APIResponse<User> = try await APIClient.shared.get("/user")
-            guard response.success, let data = response.data else {
-                errorMessage = response.message
-                user = nil
-                return
-            }
-            user = data
+            // The API returns User directly, not wrapped in APIResponse
+            let userData: User = try await APIClient.shared.makeDirectRequest("/user")
+            user = userData
         } catch {
             errorMessage = error.localizedDescription
             user = nil

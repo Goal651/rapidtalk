@@ -256,6 +256,11 @@ final class APIClient: ObservableObject {
         try await makeRequest(endpoint)
     }
     
+    // Direct request method for endpoints that return data without APIResponse wrapper
+    func makeDirectRequest<T: Decodable>(_ endpoint: String, method: String = "GET", body: Data? = nil) async throws -> T {
+        try await makeRequest(endpoint, method: method, body: body)
+    }
+    
     func post<T: Decodable>(_ endpoint: String, data: Encodable) async throws -> APIResponse<T> {
         let body = try Self.jsonEncoder.encode(AnyEncodable(data))
         return try await makeRequest(endpoint, method: "POST", body: body)
