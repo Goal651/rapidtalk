@@ -258,9 +258,11 @@ struct AnimatedProfileBackground: View {
 
 struct FloatingProfileElements: View {
     @State private var rotation: Double = 0
+    @State private var particlePositions: [CGPoint] = []
     
     var body: some View {
         ZStack {
+            // Main floating icons
             ForEach(0..<8) { index in
                 FloatingIcon(
                     icon: icons[index],
@@ -270,10 +272,45 @@ struct FloatingProfileElements: View {
                     rotation: rotation
                 )
             }
+            
+            // Particle system
+            ForEach(0..<20) { index in
+                Circle()
+                    .fill(colors[index % colors.count].opacity(0.6))
+                    .frame(width: CGFloat.random(in: 2...6), height: CGFloat.random(in: 2...6))
+                    .position(
+                        x: particlePositions.indices.contains(index) ? particlePositions[index].x : 0,
+                        y: particlePositions.indices.contains(index) ? particlePositions[index].y : 0
+                    )
+                    .blur(radius: 1)
+            }
         }
         .onAppear {
+            // Initialize particle positions
+            particlePositions = (0..<20).map { _ in
+                CGPoint(
+                    x: CGFloat.random(in: -200...200),
+                    y: CGFloat.random(in: -200...200)
+                )
+            }
+            
+            // Start animations
             withAnimation(.linear(duration: 30).repeatForever(autoreverses: false)) {
                 rotation = 360
+            }
+            
+            // Animate particles
+            animateParticles()
+        }
+    }
+    
+    private func animateParticles() {
+        withAnimation(.easeInOut(duration: 4).repeatForever(autoreverses: true)) {
+            particlePositions = particlePositions.map { _ in
+                CGPoint(
+                    x: CGFloat.random(in: -250...250),
+                    y: CGFloat.random(in: -250...250)
+                )
             }
         }
     }
@@ -1258,3 +1295,11 @@ struct ScrollOffsetPreferenceKey: PreferenceKey {
 }
 
 
+
+// MARK: - Helper Functions
+
+private func formatDate(_ date: Date) -> String {
+    let formatter = DateFormatter()
+    formatter.dateStyle = .medium
+    return formatter.string(from: date)
+}
