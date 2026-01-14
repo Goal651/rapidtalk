@@ -83,7 +83,7 @@ struct WelcomeScreen: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 60, height: 60)
-                    .foregroundColor(.yellow.opacity(0.9))
+                    .foregroundColor(AppTheme.AccentColors.warning)
                     .rotationEffect(.degrees(wave ? 15 : -15))
                     .animation(
                         .easeInOut(duration: 0.6).repeatForever(autoreverses: true),

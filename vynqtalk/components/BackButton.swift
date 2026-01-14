@@ -19,14 +19,14 @@ struct BackButton: View {
                 nav.pop()
             }
         }) {
-            HStack(spacing: 6) {
+            HStack(spacing: AppTheme.Spacing.s) {
                 Image(systemName: "chevron.left")
-                    .font(.title3)
+                    .font(AppTheme.Typography.title3)
                 Text("Back")
-                    .font(.body)
+                    .font(AppTheme.Typography.body)
             }
         }
-        .foregroundColor(.white)
-        .padding(.leading)
+        .foregroundColor(AppTheme.TextColors.primary)
+        .padding(.leading, AppTheme.Spacing.m)
     }
 }

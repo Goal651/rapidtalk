@@ -15,174 +15,114 @@ struct RegisterScreen: View {
     @State private var email: String = ""
     @State private var password: String = ""
     @State private var confirmPassword: String = ""
-    @State private var showModal: Bool = false
+    @State private var showSuccessModal: Bool = false
+    @State private var isLoading: Bool = false
     
     @AppStorage("loggedIn") var loggedIn: Bool = false
     
+    // Email validation function
     func isValidEmail(_ email: String) -> Bool {
         let regex = #"^\S+@\S+\.\S+$"#
         return email.range(of: regex, options: .regularExpression) != nil
     }
     
+    // Password match validation
     var passwordsMatch: Bool {
         !password.isEmpty && password == confirmPassword
     }
     
+    // Form validation
+    var isFormValid: Bool {
+        !name.isEmpty && isValidEmail(email) && !password.isEmpty && passwordsMatch
+    }
+    
     var body: some View {
         ZStack {
-            // Background
-            LinearGradient(
-                colors: [
-                    Color.black,
-                    Color.blue.opacity(0.35),
-                    Color.black.opacity(0.95)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            // Animated Gradient Background
+            AnimatedGradientBackground(configuration: .primary)
             
-            VStack(spacing: 30) {
-                // Title
-                VStack(spacing: 6) {
-                    Text("Create your account")
-                        .foregroundColor(.white.opacity(0.9))
-                        .font(.title3)
-                    
-                    Text("Register")
-                        .foregroundColor(.white)
-                        .font(.system(size: 36, weight: .bold))
-                }
-                .padding(.top, 45)
-                
-                // Name
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Name")
-                        .foregroundColor(.white.opacity(0.8))
-                        .font(.subheadline)
-                    
-                    TextField("Enter your name", text: $name)
-                        .padding()
-                        .background(Color.white.opacity(0.08))
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.white.opacity(0.25), lineWidth: 1)
-                        )
-                }
-                .padding(.horizontal, 40)
-                
-                // Email
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Email")
-                        .foregroundColor(.white.opacity(0.8))
-                        .font(.subheadline)
-                    
-                    TextField("Enter your email", text: $email)
-                        .keyboardType(.emailAddress)
-                        .textInputAutocapitalization(.never)
-                        .disableAutocorrection(true)
-                        .padding()
-                        .background(Color.white.opacity(0.08))
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(
-                                    !email.isEmpty && !isValidEmail(email)
-                                        ? Color.red.opacity(0.6)
-                                        : Color.white.opacity(0.25),
-                                    lineWidth: 1
-                                )
-                        )
-                    
-                    if !isValidEmail(email) && !email.isEmpty {
-                        Text("Invalid email format")
-                            .foregroundColor(.red)
-                            .font(.caption)
+            ScrollView {
+                VStack(spacing: AppTheme.Spacing.l) {
+                    // Title Section
+                    VStack(spacing: AppTheme.Spacing.s) {
+                        Text("Create your account")
+                            .font(AppTheme.Typography.title3)
+                            .foregroundColor(AppTheme.TextColors.secondary)
+                        
+                        Text("Register")
+                            .font(AppTheme.Typography.largeTitle)
+                            .foregroundColor(AppTheme.TextColors.primary)
                     }
-                }
-                .padding(.horizontal, 40)
-                
-                // Password
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Password")
-                        .foregroundColor(.white.opacity(0.8))
-                        .font(.subheadline)
+                    .padding(.top, AppTheme.Spacing.xxl)
                     
-                    SecureField("Enter password", text: $password)
-                        .padding()
-                        .background(Color.white.opacity(0.08))
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.white.opacity(0.25), lineWidth: 1)
-                        )
-                }
-                .padding(.horizontal, 40)
-                
-                // Confirm Password
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Confirm Password")
-                        .foregroundColor(.white.opacity(0.8))
-                        .font(.subheadline)
+                    // Name Field
+                    CustomTextField(
+                        label: "Name",
+                        placeholder: "Enter your name",
+                        text: $name,
+                        keyboardType: .default
+                    )
+                    .padding(.horizontal, AppTheme.Spacing.xl)
                     
-                    SecureField("Re-enter password", text: $confirmPassword)
-                        .padding()
-                        .background(Color.white.opacity(0.08))
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(
-                                    !confirmPassword.isEmpty && !passwordsMatch
-                                        ? Color.red.opacity(0.6)
-                                        : Color.white.opacity(0.25),
-                                    lineWidth: 1
-                                )
-                        )
+                    // Email Field with Validation
+                    CustomTextField(
+                        label: "Email",
+                        placeholder: "Enter your email",
+                        text: $email,
+                        keyboardType: .emailAddress,
+                        validation: isValidEmail,
+                        errorMessage: "Invalid email format"
+                    )
+                    .padding(.horizontal, AppTheme.Spacing.xl)
                     
-                    if !confirmPassword.isEmpty && !passwordsMatch {
-                        Text("Passwords do not match")
-                            .foregroundColor(.red)
-                            .font(.caption)
-                    }
+                    // Password Field
+                    CustomTextField(
+                        label: "Password",
+                        placeholder: "Enter password",
+                        text: $password,
+                        isSecure: true
+                    )
+                    .padding(.horizontal, AppTheme.Spacing.xl)
+                    
+                    // Confirm Password Field with Match Validation
+                    CustomTextField(
+                        label: "Confirm Password",
+                        placeholder: "Re-enter password",
+                        text: $confirmPassword,
+                        isSecure: true,
+                        validation: { _ in passwordsMatch },
+                        errorMessage: "Passwords do not match"
+                    )
+                    .padding(.horizontal, AppTheme.Spacing.xl)
+                    
+                    // Register Button
+                    CustomButton(
+                        title: "Register",
+                        style: .primary,
+                        action: handleRegister,
+                        isLoading: isLoading,
+                        isDisabled: !isFormValid
+                    )
+                    .padding(.horizontal, AppTheme.Spacing.xl)
+                    .padding(.top, AppTheme.Spacing.m)
+                    
+                    Spacer()
                 }
-                .padding(.horizontal, 40)
-                
-                // Register button
-                Button {
-                    Task {
-                        let ok = await authVM.register(email: email, name: name, password: password)
-                        if ok {
-                            loggedIn = true
-                            withAnimation { showModal = true }
-                        } else {
-                            withAnimation { showModal = true }
-                        }
-                    }
-                } label: {
-                    Text("Register")
-                        .font(.title3.bold())
-                        .foregroundColor(.black)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.white)
-                        .cornerRadius(14)
-                        .shadow(color: .white.opacity(0.1), radius: 10, y: 5)
-                }
-                .padding(.horizontal, 40)
-                
-                Spacer()
             }
             
-            // Modal
-            if showModal {
-                ModalView(
-                    title: "Account Created!",
-                    description: "Welcome to Vynqtalk 🎉",
-                    onClose: { withAnimation {
-                        showModal = false
-                        nav.reset(to: .main)
-                    } }
+            // Success Modal
+            if showSuccessModal {
+                RegisterSuccessModal(
+                    userName: name,
+                    onDismiss: {
+                        withAnimation(AppTheme.AnimationCurves.easeOut) {
+                            showSuccessModal = false
+                        }
+                        // Navigate to Home Screen after modal dismisses
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            nav.reset(to: .main)
+                        }
+                    }
                 )
                 .transition(.scale.combined(with: .opacity))
                 .zIndex(1)
@@ -200,5 +140,28 @@ struct RegisterScreen: View {
                 removal: .move(edge: .leading).combined(with: .opacity)
             )
         )
+    }
+    
+    // MARK: - Actions
+    
+    private func handleRegister() {
+        isLoading = true
+        
+        Task {
+            let success = await authVM.register(email: email, name: name, password: password)
+            
+            await MainActor.run {
+                isLoading = false
+                
+                if success {
+                    loggedIn = true
+                    withAnimation(AppTheme.AnimationCurves.easeOut) {
+                        showSuccessModal = true
+                    }
+                }
+                // Note: Error handling would show a toast notification
+                // For now, we just stop loading on failure
+            }
+        }
     }
 }

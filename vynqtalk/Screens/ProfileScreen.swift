@@ -7,33 +7,27 @@ struct ProfileScreen: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [
-                    Color.black,
-                    Color.blue.opacity(0.35),
-                    Color.black.opacity(0.95)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            AnimatedGradientBackground()
+                .ignoresSafeArea()
 
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.m) {
                 Text("Profile")
-                    .font(.system(size: 34, weight: .bold))
-                    .foregroundColor(.white)
-                    .padding(.top, 45)
+                    .font(AppTheme.Typography.largeTitle)
+                    .foregroundColor(AppTheme.TextColors.primary)
+                    .padding(.top, AppTheme.Spacing.xxl)
 
                 if vm.isLoading {
                     ProgressView()
-                        .tint(.white)
+                        .tint(AppTheme.TextColors.primary)
                 } else if let err = vm.errorMessage {
                     Text(err)
-                        .foregroundColor(.red.opacity(0.85))
+                        .foregroundColor(AppTheme.AccentColors.error)
+                        .font(AppTheme.Typography.body)
                 } else if let user = vm.user {
                     UserComponent(user: user)
 
-                    Divider().overlay(Color.white.opacity(0.15))
+                    Divider()
+                        .overlay(AppTheme.TextColors.tertiary)
 
                     Button {
                         APIClient.shared.logout()
@@ -43,22 +37,23 @@ struct ProfileScreen: View {
                         nav.reset(to: .welcome)
                     } label: {
                         Text("Logout")
-                            .font(.headline)
-                            .foregroundColor(.white)
+                            .font(AppTheme.Typography.headline)
+                            .foregroundColor(AppTheme.TextColors.primary)
                             .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.red.opacity(0.85))
-                            .cornerRadius(14)
+                            .padding(AppTheme.Spacing.m)
+                            .background(AppTheme.AccentColors.error)
+                            .cornerRadius(AppTheme.CornerRadius.l)
                     }
-                    .padding(.top, 8)
+                    .padding(.top, AppTheme.Spacing.s)
                 } else {
                     Text("No profile loaded")
-                        .foregroundColor(.white.opacity(0.7))
+                        .foregroundColor(AppTheme.TextColors.secondary)
+                        .font(AppTheme.Typography.body)
                 }
 
                 Spacer()
             }
-            .padding(.horizontal, 25)
+            .padding(.horizontal, AppTheme.Spacing.l)
         }
         .navigationBarBackButtonHidden()
         .task { await vm.loadMe() }

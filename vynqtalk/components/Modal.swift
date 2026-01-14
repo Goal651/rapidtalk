@@ -14,45 +14,44 @@ struct ModalView: View {
     var body: some View {
         ZStack {
             // Blur layer only
-            Color.clear
-                .background(.black.opacity(0.4))
+            AppTheme.GradientColors.deepNavyBlack.opacity(0.4)
                 .ignoresSafeArea()
                 .onTapGesture {
                     onClose() // dismiss when tapping outside
                 }
 
             // Centered modal card
-            VStack(spacing: 20) {
+            VStack(spacing: AppTheme.Spacing.l) {
                 Text(title)
-                    .font(.title2.bold())
-                    .foregroundColor(.white)
+                    .font(AppTheme.Typography.title2)
+                    .foregroundColor(AppTheme.TextColors.primary)
                     .multilineTextAlignment(.center)
                 
                 Text(description)
-                    .font(.body)
-                    .foregroundColor(.white.opacity(0.8))
+                    .font(AppTheme.Typography.body)
+                    .foregroundColor(AppTheme.TextColors.secondary)
                     .multilineTextAlignment(.center)
                 
                 Button(action: {
                     onClose()
                 }) {
                     Text("Close")
-                        .font(.headline)
-                        .foregroundColor(.white)
+                        .font(AppTheme.Typography.headline)
+                        .foregroundColor(AppTheme.TextColors.primary)
                         .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue)
-                        .cornerRadius(12)
-                        .shadow(color: Color.blue.opacity(0.4), radius: 10, y: 4)
+                        .padding(AppTheme.Spacing.m)
+                        .background(AppTheme.AccentColors.primary)
+                        .cornerRadius(AppTheme.CornerRadius.m)
+                        .shadow(color: AppTheme.AccentColors.primary.opacity(0.4), radius: 10, y: 4)
                 }
             }
-            .padding()
+            .padding(AppTheme.Spacing.l)
             .background(
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color.black.opacity(0.85)) // modal card only
-                    .shadow(color: .black.opacity(0.5), radius: 20, y: 10)
+                RoundedRectangle(cornerRadius: AppTheme.CornerRadius.xl)
+                    .fill(AppTheme.GradientColors.deepNavyBlack.opacity(0.85))
+                    .shadow(color: AppTheme.GradientColors.deepNavyBlack.opacity(0.5), radius: 20, y: 10)
             )
-            .padding(.horizontal, 40)
+            .padding(.horizontal, AppTheme.Spacing.xl)
         }
     }
 }

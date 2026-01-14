@@ -75,7 +75,7 @@ struct CustomTextField: View {
             .padding(AppTheme.Spacing.m)
             .background(
                 RoundedRectangle(cornerRadius: AppTheme.CornerRadius.m)
-                    .fill(Color.white.opacity(0.08))
+                    .fill(AppTheme.SurfaceColors.surface)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: AppTheme.CornerRadius.m)
@@ -131,7 +131,7 @@ struct CustomTextField: View {
         if isFocused {
             return AppTheme.AccentColors.primary.opacity(0.6)
         }
-        return Color.white.opacity(0.25)
+        return AppTheme.TextColors.tertiary
     }
     
     private var shadowColor: Color {

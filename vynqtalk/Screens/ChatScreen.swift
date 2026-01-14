@@ -13,74 +13,77 @@ struct ChatScreen: View {
     @EnvironmentObject var messageVM: MessageViewModel
     @EnvironmentObject var wsM: WebSocketManager
     @State private var messageText: String = ""
+    @State private var isSendButtonPressed = false
+    @State private var isOtherUserTyping = false // For typing indicator
     let userId: Int
     let userName: String
     
     var body: some View {
         ZStack {
-            // Background
-            LinearGradient(
-                colors: [
-                    Color.black,
-                    Color.blue.opacity(0.35),
-                    Color.black.opacity(0.95)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            // Background - AnimatedGradientBackground
+            AnimatedGradientBackground()
+                .ignoresSafeArea()
             
             VStack(spacing: 0) {
                 
-                // Header
-                HStack(spacing: 12) {
+                // Header with theme styling
+                HStack(spacing: AppTheme.Spacing.m) {
                     Image(systemName: "person.circle.fill")
-                        .font(.system(size: 36))
-                        .foregroundColor(.white.opacity(0.9))
+                        .font(.system(size: 40))
+                        .foregroundColor(AppTheme.TextColors.primary)
                     
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
                         Text(userName)
-                            .foregroundColor(.white)
-                            .font(.headline)
+                            .foregroundColor(AppTheme.TextColors.primary)
+                            .font(AppTheme.Typography.headline)
                         
                         Text("online")
-                            .foregroundColor(.green)
-                            .font(.caption)
+                            .foregroundColor(AppTheme.AccentColors.success)
+                            .font(AppTheme.Typography.caption)
                     }
                     
                     Spacer()
                 }
-                .padding()
-                .background(Color.black.opacity(0.4))
+                .padding(AppTheme.Spacing.m)
+                .background(
+                    AppTheme.GradientColors.deepNavyBlack.opacity(0.4)
+                        .blur(radius: 10)
+                )
                 
                 // Messages
                 ScrollView {
-                    VStack(spacing: 12) {
+                    VStack(spacing: AppTheme.Spacing.m) {
                         if messageVM.isLoading {
-                            ProgressView()
-                                .tint(.white)
-                                .padding(.top, 20)
+                            LoadingView(style: .spinner)
+                                .padding(.top, AppTheme.Spacing.l)
                         }
                         if let err = messageVM.errorMessage {
                             Text(err)
-                                .foregroundColor(.red.opacity(0.85))
-                                .padding(.top, 20)
+                                .foregroundColor(AppTheme.AccentColors.error)
+                                .font(AppTheme.Typography.body)
+                                .padding(.top, AppTheme.Spacing.l)
                         }
                         ForEach(messageVM.messages) { message in
                             MessageBubble(message: message)
                         }
+                        
+                        // Typing indicator
+                        if isOtherUserTyping {
+                            TypingIndicator()
+                        }
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
+                    .padding(.horizontal, AppTheme.Spacing.m)
+                    .padding(.vertical, AppTheme.Spacing.m)
                 }
                 
-                // Input bar
-                HStack(spacing: 12) {
+                // Input bar with theme styling
+                HStack(spacing: AppTheme.Spacing.m) {
                     TextField("Message", text: $messageText)
-                        .padding(12)
-                        .background(Color.white.opacity(0.08))
-                        .cornerRadius(20)
-                        .foregroundColor(.white)
+                        .padding(AppTheme.Spacing.m)
+                        .background(AppTheme.SurfaceColors.surface)
+                        .cornerRadius(AppTheme.CornerRadius.xl)
+                        .foregroundColor(AppTheme.TextColors.primary)
+                        .font(AppTheme.Typography.body)
                     
                     Button {
 //                        wsM.sendChatMessage(
@@ -91,14 +94,33 @@ struct ChatScreen: View {
                         messageText = ""
                     } label: {
                         Image(systemName: "paperplane.fill")
-                            .foregroundColor(.white)
-                            .padding(12)
-                            .background(Color.blue.opacity(0.8))
+                            .foregroundColor(AppTheme.TextColors.primary)
+                            .font(.system(size: 18, weight: .semibold))
+                            .frame(width: 44, height: 44)
+                            .background(
+                                LinearGradient(
+                                    colors: [
+                                        AppTheme.AccentColors.primary,
+                                        AppTheme.AccentColors.primary.opacity(0.8)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
                             .clipShape(Circle())
                     }
+                    .scaleEffect(isSendButtonPressed ? 0.9 : 1.0)
+                    .onLongPressGesture(minimumDuration: .infinity, maximumDistance: .infinity, pressing: { pressing in
+                        withAnimation(AppTheme.AnimationCurves.buttonPress) {
+                            isSendButtonPressed = pressing
+                        }
+                    }, perform: {})
                 }
-                .padding()
-                .background(Color.black.opacity(0.5))
+                .padding(AppTheme.Spacing.m)
+                .background(
+                    AppTheme.GradientColors.deepNavyBlack.opacity(0.5)
+                        .blur(radius: 10)
+                )
             }
         }
         .navigationBarBackButtonHidden()

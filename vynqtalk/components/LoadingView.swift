@@ -146,7 +146,7 @@ struct LoadingView_Previews: PreviewProvider {
                 )
                 
                 Divider()
-                    .background(Color.white.opacity(0.3))
+                    .background(AppTheme.TextColors.tertiary)
                 
                 // Dots style
                 LoadingView(
@@ -155,7 +155,7 @@ struct LoadingView_Previews: PreviewProvider {
                 )
                 
                 Divider()
-                    .background(Color.white.opacity(0.3))
+                    .background(AppTheme.TextColors.tertiary)
                 
                 // Pulse style
                 LoadingView(
@@ -164,7 +164,7 @@ struct LoadingView_Previews: PreviewProvider {
                 )
                 
                 Divider()
-                    .background(Color.white.opacity(0.3))
+                    .background(AppTheme.TextColors.tertiary)
                 
                 // Without message
                 LoadingView(style: .spinner)

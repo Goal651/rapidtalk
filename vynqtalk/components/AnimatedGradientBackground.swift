@@ -110,7 +110,7 @@ struct AnimatedGradientBackground_Previews: PreviewProvider {
                     colors: [
                         AppTheme.AccentColors.primary,
                         AppTheme.AccentColors.primary.opacity(0.6),
-                        Color.purple.opacity(0.8)
+                        AppTheme.GradientColors.softBlue
                     ],
                     animates: false
                 )

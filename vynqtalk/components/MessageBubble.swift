@@ -9,6 +9,7 @@ import SwiftUI
 struct MessageBubble: View {
     @EnvironmentObject var authVM: AuthViewModel
     let message: Message
+    @State private var appeared = false
 
     var isMe: Bool {
         message.sender?.id == authVM.userId
@@ -22,31 +23,57 @@ struct MessageBubble: View {
     }
 
     var body: some View {
-        HStack {
+        HStack(alignment: .bottom, spacing: AppTheme.Spacing.s) {
             if isMe {
                 Spacer()
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(message.content ?? "")
-                    .foregroundColor(.white)
-                    .padding(10)
-                    .background(
-                        isMe
-                        ? Color.blue.opacity(0.85)
-                        : Color.white.opacity(0.12)
-                    )
-                    .cornerRadius(14)
-
+                
+                // Time for sent messages (left side)
                 Text(formattedTime)
-                    .font(.caption2)
-                    .foregroundColor(.white.opacity(0.6))
-                    .padding(.horizontal, 6)
+                    .font(AppTheme.Typography.caption2)
+                    .foregroundColor(AppTheme.TextColors.tertiary)
             }
-            .frame(maxWidth: 260, alignment: isMe ? .trailing : .leading)
+
+            // Message bubble
+            Text(message.content ?? "")
+                .foregroundColor(AppTheme.TextColors.primary)
+                .font(AppTheme.Typography.body)
+                .padding(AppTheme.Spacing.m)
+                .background(
+                    Group {
+                        if isMe {
+                            // Gradient background for sent messages
+                            LinearGradient(
+                                colors: [
+                                    AppTheme.AccentColors.primary,
+                                    AppTheme.AccentColors.primary.opacity(0.8)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        } else {
+                            // Solid background for received messages
+                            AppTheme.SurfaceColors.surfaceMedium
+                        }
+                    }
+                )
+                .cornerRadius(18)
+                .frame(maxWidth: 260, alignment: isMe ? .trailing : .leading)
 
             if !isMe {
+                // Time for received messages (right side)
+                Text(formattedTime)
+                    .font(AppTheme.Typography.caption2)
+                    .foregroundColor(AppTheme.TextColors.tertiary)
+                
                 Spacer()
+            }
+        }
+        // Slide-in animation for messages
+        .opacity(appeared ? 1 : 0)
+        .offset(x: appeared ? 0 : (isMe ? 50 : -50))
+        .onAppear {
+            withAnimation(.easeOut(duration: AppTheme.AnimationDuration.normal)) {
+                appeared = true
             }
         }
     }
