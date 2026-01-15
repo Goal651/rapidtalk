@@ -5,6 +5,7 @@ struct MainTabView: View {
     @EnvironmentObject var wsM: WebSocketManager
     @State private var appeared: Bool = false
     @State private var selectedTab: Int = 0
+    @State private var isAdmin: Bool = false
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -18,17 +19,31 @@ struct MainTabView: View {
                     }
                 }
                 .tag(0)
+            
+            // Admin tab (only visible for admins)
+            if isAdmin {
+                AdminDashboard()
+                    .tabItem {
+                        VStack(spacing: 4) {
+                            Image(systemName: selectedTab == 1 ? "shield.checkered.fill" : "shield.checkered")
+                                .font(.system(size: 24, weight: selectedTab == 1 ? .semibold : .regular))
+                            Text("Admin")
+                                .font(AppTheme.Typography.caption2)
+                        }
+                    }
+                    .tag(1)
+            }
 
             ProfileScreen()
                 .tabItem {
                     VStack(spacing: 4) {
-                        Image(systemName: selectedTab == 1 ? "person.crop.circle.fill" : "person.crop.circle")
-                            .font(.system(size: 24, weight: selectedTab == 1 ? .semibold : .regular))
+                        Image(systemName: selectedTab == (isAdmin ? 2 : 1) ? "person.crop.circle.fill" : "person.crop.circle")
+                            .font(.system(size: 24, weight: selectedTab == (isAdmin ? 2 : 1) ? .semibold : .regular))
                         Text("Profile")
                             .font(AppTheme.Typography.caption2)
                     }
                 }
-                .tag(1)
+                .tag(isAdmin ? 2 : 1)
         }
         .accentColor(AppTheme.AccentColors.primary)
         .onAppear {
@@ -69,6 +84,9 @@ struct MainTabView: View {
             if !wsM.isConnected {
                 wsM.connect()
             }
+            
+            // Check if user is admin
+            await checkAdminStatus()
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
@@ -87,3 +105,33 @@ struct MainTabView: View {
 }
 
 
+
+    // MARK: - Check Admin Status
+    
+    @MainActor
+    private func checkAdminStatus() async {
+        // Check if user has admin role stored
+        if let userRole = UserDefaults.standard.string(forKey: "user_role"),
+           userRole == "ADMIN" {
+            isAdmin = true
+            return
+        }
+        
+        // Fetch user profile to check role
+        do {
+            let response: APIResponse<User> = try await APIClient.shared.get("/users/me")
+            if response.success, let user = response.data {
+                isAdmin = user.userRole == .admin
+                
+                // Store for future use
+                if let role = user.userRole {
+                    UserDefaults.standard.set(role.rawValue, forKey: "user_role")
+                }
+            }
+        } catch {
+            #if DEBUG
+            print("❌ Failed to check admin status: \(error)")
+            #endif
+        }
+    }
+}
