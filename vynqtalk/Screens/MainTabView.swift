@@ -9,7 +9,8 @@ struct MainTabView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            HomeScreen()
+            // Chats (Responsive - split view on iPad)
+            ResponsiveHomeScreen()
                 .tabItem {
                     VStack(spacing: 4) {
                         Image(systemName: selectedTab == 0 ? "house.fill" : "house")
@@ -32,18 +33,30 @@ struct MainTabView: View {
                         }
                     }
                     .tag(1)
+                
+                // Admin Chat (for admins to chat as users)
+                AdminChatScreen()
+                    .tabItem {
+                        VStack(spacing: 4) {
+                            Image(systemName: selectedTab == 2 ? "bubble.left.and.bubble.right.fill" : "bubble.left.and.bubble.right")
+                                .font(.system(size: 24, weight: selectedTab == 2 ? .semibold : .regular))
+                            Text("Chat")
+                                .font(AppTheme.Typography.caption2)
+                        }
+                    }
+                    .tag(2)
             }
 
             ProfileScreen()
                 .tabItem {
                     VStack(spacing: 4) {
-                        Image(systemName: selectedTab == (isAdmin ? 2 : 1) ? "person.crop.circle.fill" : "person.crop.circle")
-                            .font(.system(size: 24, weight: selectedTab == (isAdmin ? 2 : 1) ? .semibold : .regular))
+                        Image(systemName: selectedTab == (isAdmin ? 3 : 1) ? "person.crop.circle.fill" : "person.crop.circle")
+                            .font(.system(size: 24, weight: selectedTab == (isAdmin ? 3 : 1) ? .semibold : .regular))
                         Text("Profile")
                             .font(AppTheme.Typography.caption2)
                     }
                 }
-                .tag(isAdmin ? 2 : 1)
+                .tag(isAdmin ? 3 : 1)
         }
         .accentColor(AppTheme.AccentColors.primary)
         .onAppear {

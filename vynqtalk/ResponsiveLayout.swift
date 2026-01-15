@@ -7,14 +7,29 @@
 
 import SwiftUI
 
+/// Device type for responsive design
+enum DeviceType {
+    case iPhone
+    case iPad
+    
+    static var current: DeviceType {
+        return UIDevice.current.userInterfaceIdiom == .pad ? .iPad : .iPhone
+    }
+}
+
 /// Device size categories for responsive design
 enum DeviceSizeCategory {
     case compact    // iPhone SE, iPhone 12/13 mini
     case regular    // iPhone 12/13/14/15
     case large      // iPhone 14/15 Plus, Pro Max
+    case tablet     // iPad
     
     /// Determine size category from screen width
     static func from(width: CGFloat) -> DeviceSizeCategory {
+        if DeviceType.current == .iPad {
+            return .tablet
+        }
+        
         switch width {
         case ..<375:
             return .compact
@@ -55,6 +70,8 @@ struct ResponsiveSpacing {
             return AppTheme.Spacing.xl
         case .large:
             return AppTheme.Spacing.xxl
+        case .tablet:
+            return AppTheme.Spacing.xxl
         }
     }
     
@@ -66,6 +83,8 @@ struct ResponsiveSpacing {
         case .regular:
             return AppTheme.Spacing.xl
         case .large:
+            return AppTheme.Spacing.xxl
+        case .tablet:
             return AppTheme.Spacing.xxl
         }
     }
@@ -79,6 +98,8 @@ struct ResponsiveSpacing {
             return AppTheme.Spacing.xl
         case .large:
             return AppTheme.Spacing.xxl
+        case .tablet:
+            return AppTheme.Spacing.xxl
         }
     }
     
@@ -91,6 +112,8 @@ struct ResponsiveSpacing {
             return AppTheme.Spacing.l
         case .large:
             return AppTheme.Spacing.l
+        case .tablet:
+            return AppTheme.Spacing.xl
         }
     }
     
@@ -103,7 +126,24 @@ struct ResponsiveSpacing {
             return 1.0
         case .large:
             return 1.15
+        case .tablet:
+            return 1.2
         }
+    }
+    
+    /// Check if device is iPad
+    var isTablet: Bool {
+        return sizeCategory == .tablet
+    }
+    
+    /// User list width for split view (iPad only)
+    var userListWidth: CGFloat {
+        return screenWidth * 0.35  // 35% for user list
+    }
+    
+    /// Chat width for split view (iPad only)
+    var chatWidth: CGFloat {
+        return screenWidth * 0.65  // 65% for chat
     }
 }
 
