@@ -12,7 +12,7 @@ struct ChatMessagePayload: Encodable {
     let content: String
     let type: MessageType
     let fileName: String?
-    let replyToId: String?  // UUID of the message being replied to
+    let replyToId: String? 
 }
 
 

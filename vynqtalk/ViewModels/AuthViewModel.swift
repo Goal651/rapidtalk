@@ -14,8 +14,7 @@ class AuthViewModel:ObservableObject{
     
     @AppStorage("loggedIn") var loggedIn: Bool = false
     @AppStorage("auth_token") var authToken: String = ""
-    @AppStorage("user_id") var userId: String = ""  // Changed from Int to String
-
+    @AppStorage("user_id") var userId: String = "" 
     init(nav: NavigationCoordinator) {
         self.nav = nav
     }
@@ -59,7 +58,7 @@ class AuthViewModel:ObservableObject{
             UserDefaults.standard.set(loginData.user.email, forKey: "user_email")
             UserDefaults.standard.set(loginData.user.id, forKey: "user_id")
             
-            loggedIn = true  // Set the @AppStorage property
+            loggedIn = true  
 
             nav.reset(to: .main)
             return true
@@ -93,7 +92,7 @@ class AuthViewModel:ObservableObject{
             UserDefaults.standard.set(signupData.user.email, forKey: "user_email")
             UserDefaults.standard.set(signupData.user.id, forKey: "user_id")
             
-            loggedIn = true  // Set the @AppStorage property
+            loggedIn = true 
 
             nav.reset(to: .main)
             return true

@@ -12,11 +12,11 @@ import SwiftUI
 // MARK: - WebSocket Message Models
 
 struct WebSocketSendMessage: Encodable {
-    let type: String  // "chat_message"
-    let receiverId: String  // Changed from Int to String (UUID)
+    let type: String  
+    let receiverId: String 
     let content: String
-    let messageType: String  // "TEXT", "IMAGE", etc.
-    let replyToId: String?  // UUID of message being replied to
+    let messageType: String  
+    let replyToId: String? 
     
     init(receiverId: String, content: String, messageType: MessageType = .text, replyToId: String? = nil) {
         self.type = "chat_message"
@@ -182,7 +182,7 @@ enum WebSocketData {
 }
 
 struct UserStatus: Decodable {
-    let userId: String  // Changed from Int to String (UUID)
+    let userId: String 
     let online: Bool
     let lastActive: Date?
 }
@@ -207,10 +207,10 @@ final class WebSocketManager: ObservableObject {
     @Published var isConnected = false
     @Published var incomingMessage: Message?
     @Published var userStatusUpdate: UserStatus?
-    @Published var onlineUserIds: Set<String> = [] // Array of currently online user IDs
+    @Published var onlineUserIds: Set<String> = []
     @Published var reactionUpdate: ReactionUpdate?
-    @Published var typingUsers: [String: Bool] = [:] // userId: isTyping
-    @Published var userLastActiveCache: [String: Date] = [:] // Cache last active times
+    @Published var typingUsers: [String: Bool] = [:] 
+    @Published var userLastActiveCache: [String: Date] = [:] 
     
     private var reconnectAttempts = 0
     private let maxReconnectAttempts = 5
@@ -241,7 +241,7 @@ final class WebSocketManager: ObservableObject {
     func connect() {
         guard let token = APIClient.shared.getAuthToken() else {
             #if DEBUG
-            print("❌ WebSocket: No auth token available")
+            print("  WebSocket: No auth token available")
             #endif
             return
         }
@@ -249,7 +249,7 @@ final class WebSocketManager: ObservableObject {
         let wsURL = APIClient.environment.wsURL
         guard let url = URL(string: "\(wsURL)/ws?token=\(token)") else {
             #if DEBUG
-            print("❌ WebSocket: Invalid URL")
+            print("  WebSocket: Invalid URL")
             #endif
             return
         }
@@ -287,11 +287,11 @@ final class WebSocketManager: ObservableObject {
             switch result {
             case .success(let message):
                 self.handleMessage(message)
-                self.receiveMessage() // Continue listening
+                self.receiveMessage() 
                 
             case .failure(let error):
                 #if DEBUG
-                print("❌ WebSocket error: \(error.localizedDescription)")
+                print("  WebSocket error: \(error.localizedDescription)")
                 #endif
                 
                 DispatchQueue.main.async {
@@ -318,7 +318,7 @@ final class WebSocketManager: ObservableObject {
                 handleWebSocketResponse(response)
             } catch {
                 #if DEBUG
-                print("❌ Failed to decode WebSocket message: \(error)")
+                print("  Failed to decode WebSocket message: \(error)")
                 #endif
             }
             
@@ -449,7 +449,7 @@ final class WebSocketManager: ObservableObject {
         guard let data = try? JSONEncoder().encode(message),
               let string = String(data: data, encoding: .utf8) else {
             #if DEBUG
-            print("❌ Failed to encode message")
+            print("  Failed to encode message")
             #endif
             return
         }
@@ -464,7 +464,7 @@ final class WebSocketManager: ObservableObject {
         task?.send(.string(string)) { error in
             if let error = error {
                 #if DEBUG
-                print("❌ Failed to send message: \(error.localizedDescription)")
+                print("  Failed to send message: \(error.localizedDescription)")
                 #endif
             } else {
                 #if DEBUG
@@ -484,7 +484,7 @@ final class WebSocketManager: ObservableObject {
         guard let data = try? JSONEncoder().encode(typingMessage),
               let string = String(data: data, encoding: .utf8) else {
             #if DEBUG
-            print("❌ Failed to encode typing indicator")
+            print("  Failed to encode typing indicator")
             #endif
             return
         }
@@ -492,7 +492,7 @@ final class WebSocketManager: ObservableObject {
         task?.send(.string(string)) { error in
             if let error = error {
                 #if DEBUG
-                print("❌ Failed to send typing indicator: \(error.localizedDescription)")
+                print("  Failed to send typing indicator: \(error.localizedDescription)")
                 #endif
             } else {
                 #if DEBUG
@@ -511,7 +511,7 @@ final class WebSocketManager: ObservableObject {
         guard let data = try? JSONEncoder().encode(reactionMessage),
               let string = String(data: data, encoding: .utf8) else {
             #if DEBUG
-            print("❌ Failed to encode reaction")
+            print("  Failed to encode reaction")
             #endif
             return
         }
@@ -524,7 +524,7 @@ final class WebSocketManager: ObservableObject {
         task?.send(.string(string)) { error in
             if let error = error {
                 #if DEBUG
-                print("❌ Failed to send reaction: \(error.localizedDescription)")
+                print("  Failed to send reaction: \(error.localizedDescription)")
                 #endif
             } else {
                 #if DEBUG
@@ -539,7 +539,7 @@ final class WebSocketManager: ObservableObject {
     private func attemptReconnection() {
         guard reconnectAttempts < maxReconnectAttempts else {
             #if DEBUG
-            print("❌ WebSocket: Max reconnection attempts reached")
+            print("  WebSocket: Max reconnection attempts reached")
             #endif
             return
         }

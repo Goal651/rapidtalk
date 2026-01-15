@@ -168,22 +168,22 @@ final class APIClient: ObservableObject {
             
         } catch let error as APIError {
             #if DEBUG
-            print("❌ API Error: \(error.localizedDescription ?? "Unknown error")")
+            print("  API Error: \(error.localizedDescription ?? "Unknown error")")
             #endif
             throw error
         } catch let error as URLError {
             #if DEBUG
-            print("❌ URL Error: \(error.localizedDescription)")
+            print("  URL Error: \(error.localizedDescription)")
             #endif
             throw handleURLError(error)
         } catch let error as DecodingError {
             #if DEBUG
-            print("❌ Decoding Error: \(error)")
+            print("  Decoding Error: \(error)")
             #endif
             throw APIError.decodingError(error)
         } catch {
             #if DEBUG
-            print("❌ Unknown Error: \(error.localizedDescription)")
+            print("  Unknown Error: \(error.localizedDescription)")
             #endif
             throw APIError.unknown(error)
         }

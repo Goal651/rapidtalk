@@ -632,7 +632,7 @@ struct ChatScreen: View {
                 
             } catch {
                 #if DEBUG
-                print("❌ Media upload error: \(error)")
+                print("  Media upload error: \(error)")
                 #endif
                 isUploadingMedia = false
                 selectedMedia = nil

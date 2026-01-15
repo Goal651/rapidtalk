@@ -1,7 +1,7 @@
 import Foundation
 
 class Message: Codable, Identifiable {
-    let id: String?  // Changed from Int to String (UUID)
+    let id: String?  
     let content: String?
     let type: MessageType?
     let sender: User?
@@ -11,8 +11,9 @@ class Message: Codable, Identifiable {
     let edited: Bool?
     let reactions: [Reaction]?
     let replyTo: Message?
+    let duration: Double?
 
-    public init(id: String?, content: String?, type: MessageType?, sender: User?, receiver: User?, timestamp: Date?, fileName: String?, edited: Bool?, reactions: [Reaction]?, replyTo: Message?) {
+    public init(id: String?, content: String?, type: MessageType?, sender: User?, receiver: User?, timestamp: Date?, fileName: String?, edited: Bool?, reactions: [Reaction]?, replyTo: Message?, duration: Double? = nil) {
         self.id = id
         self.content = content
         self.type = type
@@ -23,5 +24,6 @@ class Message: Codable, Identifiable {
         self.edited = edited
         self.reactions = reactions
         self.replyTo = replyTo
+        self.duration = duration
     }
 }

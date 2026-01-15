@@ -49,7 +49,7 @@ enum AppRoute: Hashable {
 // MARK: - Sheet Presentation
 
 enum AppSheet: Identifiable {
-    case userProfile(userId: String)  // Changed from Int to String
+    case userProfile(userId: String)  
     case imageViewer(url: String)
     case settings
     

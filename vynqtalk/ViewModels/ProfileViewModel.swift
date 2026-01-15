@@ -12,13 +12,13 @@ final class ProfileViewModel: ObservableObject {
         defer { isLoading = false }
 
         do {
-            // Try to load user data from the API
+          
             let userData: APIResponse<User> = try await APIClient.shared
                 .makeDirectRequest("/user")
             user = userData.data
 
         } catch {
-            print("❌ Profile loading error: \(error)")
+            print("  Profile loading error: \(error)")
             errorMessage = error.localizedDescription
             user = nil
 
@@ -53,7 +53,6 @@ final class ProfileViewModel: ObservableObject {
             online: true
         )
 
-        print("📝 Created fallback user: \(storedName)")
     }
     
     // MARK: - Avatar Upload
@@ -75,11 +74,11 @@ final class ProfileViewModel: ObservableObject {
                 print("✅ Avatar uploaded successfully: \(updatedUser.avatar ?? "no avatar")")
             } else {
                 errorMessage = response.message
-                print("❌ Avatar upload failed: \(response.message)")
+                print("  Avatar upload failed: \(response.message)")
             }
         } catch {
             errorMessage = "Failed to upload avatar: \(error.localizedDescription)"
-            print("❌ Avatar upload error: \(error)")
+            print("  Avatar upload error: \(error)")
         }
     }
 }

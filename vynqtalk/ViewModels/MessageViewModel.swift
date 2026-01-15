@@ -51,7 +51,7 @@ final class MessageViewModel: ObservableObject {
         defer { isLoading = false }
 
         do {
-            // ✅ Fixed: Use correct endpoint path
+           
             let endpoint = APIEndpoint.conversation(user1: meId, user2: otherUserId)
             let response: APIResponse<[Message]> =
                 try await APIClient.shared.get(endpoint.path)

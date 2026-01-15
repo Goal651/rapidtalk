@@ -337,12 +337,12 @@ class WebSocketManager: ObservableObject {
     
     func connect() {
         guard let token = APIClient.shared.getAuthToken() else {
-            print("❌ No auth token available")
+            print("  No auth token available")
             return
         }
         
         guard let url = URL(string: "\(baseURL)/ws?token=\(token)") else {
-            print("❌ Invalid WebSocket URL")
+            print("  Invalid WebSocket URL")
             return
         }
         
@@ -374,7 +374,7 @@ class WebSocketManager: ObservableObject {
                 self?.receiveMessage() // Continue listening
                 
             case .failure(let error):
-                print("❌ WebSocket error: \(error)")
+                print("  WebSocket error: \(error)")
                 // Attempt reconnection
                 DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
                     self?.connect()
@@ -396,7 +396,7 @@ class WebSocketManager: ObservableObject {
                 let response = try JSONDecoder().decode(WebSocketResponse.self, from: data)
                 handleWebSocketResponse(response)
             } catch {
-                print("❌ Failed to decode WebSocket message: \(error)")
+                print("  Failed to decode WebSocket message: \(error)")
             }
             
         case .data(let data):
@@ -424,7 +424,7 @@ class WebSocketManager: ObservableObject {
         
         webSocket?.send(.string(string)) { error in
             if let error = error {
-                print("❌ Failed to send message: \(error)")
+                print("  Failed to send message: \(error)")
             } else {
                 #if DEBUG
                 print("📤 WebSocket sent: \(string)")

@@ -1,7 +1,7 @@
 import Foundation
 
 class User: Codable, Identifiable {
-    let id: String?  // Changed from Int to String (UUID)
+    let id: String?
     let name: String?
     let avatar: String?
     let password: String?
