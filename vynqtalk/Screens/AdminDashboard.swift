@@ -2,7 +2,7 @@
 //  AdminDashboard.swift
 //  vynqtalk
 //
-//  Admin dashboard overview screen
+//  Admin dashboard overview screen - Professional redesign
 //
 
 import SwiftUI
@@ -14,31 +14,32 @@ struct AdminDashboard: View {
     
     var body: some View {
         ZStack {
-            AppTheme.GradientColors.deepBlack
+            AppTheme.BackgroundColors.primary
                 .ignoresSafeArea()
             
             ScrollView {
-                VStack(spacing: 24) {
-                    // Header
+                VStack(spacing: 20) {
+                    // Header with real-time status
                     headerSection
                     
-                    // Stats Cards
+                    // Key metrics in compact grid
                     if let stats = adminVM.dashboardStats {
-                        statsSection(stats: stats)
+                        metricsGrid(stats: stats)
+                        
+                        // Activity chart
+                        activitySection(stats: stats)
                     } else if adminVM.isLoading {
                         ProgressView()
                             .tint(AppTheme.AccentColors.primary)
                             .padding(.top, 40)
                     }
                     
-                    // Quick Actions
-                    quickActionsSection
+                    // Quick actions grid
+                    quickActionsGrid
                 }
-                .padding(.horizontal, 24)
-                .padding(.vertical, 20)
+                .padding(20)
             }
             .opacity(appeared ? 1 : 0)
-            .offset(y: appeared ? 0 : 20)
         }
         .navigationTitle("Dashboard")
         .navigationBarTitleDisplayMode(.inline)
@@ -47,7 +48,7 @@ struct AdminDashboard: View {
             adminWS.connect()
         }
         .onAppear {
-            withAnimation(.spring(response: 0.8, dampingFraction: 0.7)) {
+            withAnimation(.easeOut(duration: 0.4)) {
                 appeared = true
             }
         }
@@ -55,129 +56,172 @@ struct AdminDashboard: View {
             adminWS.disconnect()
         }
         .onChange(of: adminWS.userStatusUpdate) { _, update in
-            handleUserStatusUpdate(update)
+            if let update = update { adminVM.handleUserStatusUpdate(update) }
         }
         .onChange(of: adminWS.messageUpdate) { _, update in
-            handleMessageUpdate(update)
+            if let update = update { adminVM.handleMessageUpdate(update) }
         }
         .onChange(of: adminWS.newUser) { _, user in
-            handleNewUser(user)
+            if let user = user { adminVM.handleNewUser(user) }
         }
         .refreshable {
             await adminVM.loadDashboardStats()
         }
     }
     
-    // MARK: - Event Handlers
-    
-    private func handleUserStatusUpdate(_ update: AdminUserStatusUpdate?) {
-        if let update = update {
-            adminVM.handleUserStatusUpdate(update)
-        }
-    }
-    
-    private func handleMessageUpdate(_ update: AdminMessageUpdate?) {
-        if let update = update {
-            adminVM.handleMessageUpdate(update)
-        }
-    }
-    
-    private func handleNewUser(_ user: AdminUser?) {
-        if let user = user {
-            adminVM.handleNewUser(user)
-        }
-    }
-    
     // MARK: - Header
     
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Image(systemName: "shield.fill")
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundColor(AppTheme.AccentColors.primary)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Admin Dashboard")
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .foregroundColor(AppTheme.TextColors.primary)
+                    
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(adminWS.isConnected ? AppTheme.AccentColors.success : AppTheme.TextColors.tertiary)
+                            .frame(width: 6, height: 6)
+                        
+                        Text(adminWS.isConnected ? "Live" : "Connecting...")
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .foregroundColor(AppTheme.TextColors.secondary)
+                    }
+                }
                 
-                Text("Admin Dashboard")
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
-            }
-            
-            HStack(spacing: 8) {
-                Circle()
-                    .fill(adminWS.isConnected ? AppTheme.AccentColors.success : .gray)
-                    .frame(width: 8, height: 8)
+                Spacer()
                 
-                Text(adminWS.isConnected ? "Real-time connected" : "Connecting...")
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
-                    .foregroundColor(.white.opacity(0.7))
+                // Refresh button
+                Button(action: {
+                    Task { await adminVM.loadDashboardStats() }
+                }) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(AppTheme.TextColors.primary)
+                        .frame(width: 40, height: 40)
+                        .background(
+                            Circle()
+                                .fill(AppTheme.SurfaceColors.base)
+                        )
+                }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
     
-    // MARK: - Stats Section
+    // MARK: - Metrics Grid
     
-    private func statsSection(stats: AdminDashboardStats) -> some View {
-        VStack(spacing: 16) {
-            HStack(spacing: 16) {
-                StatCard(
-                    icon: "person.3.fill",
-                    title: "Total Users",
-                    value: "\(stats.totalUsers)",
+    private func metricsGrid(stats: AdminDashboardStats) -> some View {
+        LazyVGrid(columns: [
+            GridItem(.flexible(), spacing: 12),
+            GridItem(.flexible(), spacing: 12)
+        ], spacing: 12) {
+            CompactMetricCard(
+                icon: "person.3.fill",
+                title: "Total Users",
+                value: "\(stats.totalUsers)",
+                color: AppTheme.AccentColors.primary
+            )
+            
+            CompactMetricCard(
+                icon: "circle.fill",
+                title: "Online",
+                value: "\(stats.activeUsers)",
+                color: AppTheme.AccentColors.success
+            )
+            
+            CompactMetricCard(
+                icon: "bubble.left.fill",
+                title: "Messages",
+                value: formatNumber(stats.totalMessages),
+                color: Color.cyan
+            )
+            
+            CompactMetricCard(
+                icon: "clock.fill",
+                title: "Last 24h",
+                value: formatNumber(stats.messagesLast24h),
+                color: Color.orange
+            )
+        }
+    }
+    
+    // MARK: - Activity Section
+    
+    private func activitySection(stats: AdminDashboardStats) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Activity")
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundColor(AppTheme.TextColors.primary)
+            
+            VStack(spacing: 16) {
+                ActivityRow(
+                    icon: "person.badge.plus.fill",
+                    title: "New users today",
+                    value: "\(stats.newUsersToday)",
                     color: AppTheme.AccentColors.primary
                 )
                 
-                StatCard(
-                    icon: "circle.fill",
-                    title: "Active Now",
-                    value: "\(stats.activeUsers)",
+                ActivityRow(
+                    icon: "paperplane.fill",
+                    title: "Messages today",
+                    value: formatNumber(stats.messagesLast24h),
+                    color: Color.cyan
+                )
+                
+                ActivityRow(
+                    icon: "chart.line.uptrend.xyaxis",
+                    title: "Active users",
+                    value: "\(stats.activeUsers) / \(stats.totalUsers)",
                     color: AppTheme.AccentColors.success
                 )
             }
-            
-            HStack(spacing: 16) {
-                StatCard(
-                    icon: "bubble.left.and.bubble.right.fill",
-                    title: "Total Messages",
-                    value: formatNumber(stats.totalMessages),
-                    color: AppTheme.AccentColors.secondary
-                )
-                
-                StatCard(
-                    icon: "person.badge.plus.fill",
-                    title: "New Today",
-                    value: "\(stats.newUsersToday)",
-                    color: Color.orange
-                )
-            }
-            
-            // Last 24h messages (full width)
-            StatCard(
-                icon: "clock.fill",
-                title: "Messages (24h)",
-                value: formatNumber(stats.messagesLast24h),
-                color: Color.cyan,
-                fullWidth: true
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(AppTheme.SurfaceColors.base)
             )
         }
     }
     
     // MARK: - Quick Actions
     
-    private var quickActionsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+    private var quickActionsGrid: some View {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Quick Actions")
-                .font(.system(size: 20, weight: .bold, design: .rounded))
-                .foregroundColor(.white)
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundColor(AppTheme.TextColors.primary)
             
-            NavigationLink {
-                AdminUserList()
-            } label: {
-                QuickActionCard(
-                    icon: "person.2.fill",
-                    title: "Manage Users",
-                    subtitle: "View and manage all users",
-                    color: AppTheme.AccentColors.primary
+            LazyVGrid(columns: [
+                GridItem(.flexible(), spacing: 12),
+                GridItem(.flexible(), spacing: 12)
+            ], spacing: 12) {
+                NavigationLink {
+                    AdminUserList()
+                } label: {
+                    QuickActionButton(
+                        icon: "person.2.fill",
+                        title: "Users",
+                        color: AppTheme.AccentColors.primary
+                    )
+                }
+                
+                QuickActionButton(
+                    icon: "chart.bar.fill",
+                    title: "Analytics",
+                    color: Color.purple
+                )
+                
+                QuickActionButton(
+                    icon: "bell.fill",
+                    title: "Notifications",
+                    color: Color.orange
+                )
+                
+                QuickActionButton(
+                    icon: "gearshape.fill",
+                    title: "Settings",
+                    color: AppTheme.TextColors.secondary
                 )
             }
         }
@@ -196,104 +240,103 @@ struct AdminDashboard: View {
     }
 }
 
-// MARK: - Stat Card
+// MARK: - Compact Metric Card
 
-struct StatCard: View {
+struct CompactMetricCard: View {
     let icon: String
     let title: String
     let value: String
     let color: Color
-    var fullWidth: Bool = false
-    @State private var appeared = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: icon)
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundColor(color)
-                    .frame(width: 48, height: 48)
-                    .background(
-                        Circle()
-                            .fill(color.opacity(0.2))
-                    )
-                
-                Spacer()
-            }
+            Image(systemName: icon)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(color)
+                .frame(width: 40, height: 40)
+                .background(
+                    Circle()
+                        .fill(color.opacity(0.15))
+                )
             
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(value)
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundColor(AppTheme.TextColors.primary)
                 
                 Text(title)
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
-                    .foregroundColor(.white.opacity(0.7))
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundColor(AppTheme.TextColors.secondary)
             }
         }
-        .frame(maxWidth: fullWidth ? .infinity : nil)
-        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(.white.opacity(0.08))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(.white.opacity(0.1), lineWidth: 1)
-                )
+            RoundedRectangle(cornerRadius: 12)
+                .fill(AppTheme.SurfaceColors.base)
         )
-        .scaleEffect(appeared ? 1 : 0.9)
-        .opacity(appeared ? 1 : 0)
-        .onAppear {
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.1)) {
-                appeared = true
-            }
+    }
+}
+
+// MARK: - Activity Row
+
+struct ActivityRow: View {
+    let icon: String
+    let title: String
+    let value: String
+    let color: Color
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(color)
+                .frame(width: 32, height: 32)
+                .background(
+                    Circle()
+                        .fill(color.opacity(0.15))
+                )
+            
+            Text(title)
+                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .foregroundColor(AppTheme.TextColors.secondary)
+            
+            Spacer()
+            
+            Text(value)
+                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .foregroundColor(AppTheme.TextColors.primary)
         }
     }
 }
 
-// MARK: - Quick Action Card
+// MARK: - Quick Action Button
 
-struct QuickActionCard: View {
+struct QuickActionButton: View {
     let icon: String
     let title: String
-    let subtitle: String
     let color: Color
     
     var body: some View {
-        HStack(spacing: 16) {
+        VStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 24, weight: .semibold))
                 .foregroundColor(color)
                 .frame(width: 56, height: 56)
                 .background(
                     Circle()
-                        .fill(color.opacity(0.2))
+                        .fill(color.opacity(0.15))
                 )
             
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
-                
-                Text(subtitle)
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
-                    .foregroundColor(.white.opacity(0.7))
-            }
-            
-            Spacer()
-            
-            Image(systemName: "chevron.right")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.white.opacity(0.5))
+            Text(title)
+                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                .foregroundColor(AppTheme.TextColors.primary)
         }
-        .padding(20)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 20)
         .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(.white.opacity(0.08))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(.white.opacity(0.1), lineWidth: 1)
-                )
+            RoundedRectangle(cornerRadius: 12)
+                .fill(AppTheme.SurfaceColors.base)
         )
     }
 }
