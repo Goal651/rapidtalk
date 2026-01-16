@@ -40,7 +40,8 @@ struct AdminDashboard: View {
             .opacity(appeared ? 1 : 0)
             .offset(y: appeared ? 0 : 20)
         }
-        .navigationBarBackButtonHidden()
+        .navigationTitle("Dashboard")
+        .navigationBarTitleDisplayMode(.inline)
         .task {
             await adminVM.loadDashboardStats()
             adminWS.connect()
@@ -54,22 +55,36 @@ struct AdminDashboard: View {
             adminWS.disconnect()
         }
         .onChange(of: adminWS.userStatusUpdate) { _, update in
-            if let update = update {
-                adminVM.handleUserStatusUpdate(update)
-            }
+            handleUserStatusUpdate(update)
         }
         .onChange(of: adminWS.messageUpdate) { _, update in
-            if let update = update {
-                adminVM.handleMessageUpdate(update)
-            }
+            handleMessageUpdate(update)
         }
         .onChange(of: adminWS.newUser) { _, user in
-            if let user = user {
-                adminVM.handleNewUser(user)
-            }
+            handleNewUser(user)
         }
         .refreshable {
             await adminVM.loadDashboardStats()
+        }
+    }
+    
+    // MARK: - Event Handlers
+    
+    private func handleUserStatusUpdate(_ update: AdminUserStatusUpdate?) {
+        if let update = update {
+            adminVM.handleUserStatusUpdate(update)
+        }
+    }
+    
+    private func handleMessageUpdate(_ update: AdminMessageUpdate?) {
+        if let update = update {
+            adminVM.handleMessageUpdate(update)
+        }
+    }
+    
+    private func handleNewUser(_ user: AdminUser?) {
+        if let user = user {
+            adminVM.handleNewUser(user)
         }
     }
     
@@ -78,7 +93,7 @@ struct AdminDashboard: View {
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Image(systemName: "shield.checkered")
+                Image(systemName: "shield.fill")
                     .font(.system(size: 28, weight: .bold))
                     .foregroundColor(AppTheme.AccentColors.primary)
                 
@@ -155,7 +170,9 @@ struct AdminDashboard: View {
                 .font(.system(size: 20, weight: .bold, design: .rounded))
                 .foregroundColor(.white)
             
-            NavigationLink(destination: AdminUserList()) {
+            NavigationLink {
+                AdminUserList()
+            } label: {
                 QuickActionCard(
                     icon: "person.2.fill",
                     title: "Manage Users",
@@ -163,7 +180,6 @@ struct AdminDashboard: View {
                     color: AppTheme.AccentColors.primary
                 )
             }
-            .buttonStyle(PlainButtonStyle())
         }
     }
     
@@ -242,7 +258,6 @@ struct QuickActionCard: View {
     let title: String
     let subtitle: String
     let color: Color
-    @State private var isPressed = false
     
     var body: some View {
         HStack(spacing: 16) {
@@ -274,18 +289,11 @@ struct QuickActionCard: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 20)
-                .fill(.white.opacity(isPressed ? 0.15 : 0.08))
+                .fill(.white.opacity(0.08))
                 .overlay(
                     RoundedRectangle(cornerRadius: 20)
                         .stroke(.white.opacity(0.1), lineWidth: 1)
                 )
-        )
-        .scaleEffect(isPressed ? 0.96 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPressed)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in isPressed = true }
-                .onEnded { _ in isPressed = false }
         )
     }
 }

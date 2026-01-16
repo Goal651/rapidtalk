@@ -19,7 +19,7 @@ struct AdminDashboardStats: Codable {
 
 // MARK: - Admin User (Extended User with Stats)
 
-struct AdminUser: Codable, Identifiable {
+struct AdminUser: Codable, Identifiable, Equatable {
     let id: String
     let name: String?
     let email: String?
@@ -63,18 +63,18 @@ enum AdminWebSocketEvent {
     case unknown
 }
 
-struct AdminUserStatusUpdate: Codable {
+struct AdminUserStatusUpdate: Codable, Equatable {
     let userId: String
     let online: Bool
     let lastActive: Date?
 }
 
-struct AdminMessageUpdate: Codable {
+struct AdminMessageUpdate: Codable, Equatable {
     let userId: String
     let messageCount: Int  // Increment by this amount
 }
 
-struct AdminSuspendUpdate: Codable {
+struct AdminSuspendUpdate: Codable, Equatable {
     let userId: String
     let suspended: Bool
     let suspendedBy: String

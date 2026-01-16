@@ -64,6 +64,72 @@ struct AdminUserList: View {
     }
     
     var body: some View {
+        mainContent
+            .navigationTitle("Manage Users")
+            .navigationBarTitleDisplayMode(.inline)
+            .task {
+                await adminVM.loadUsers(
+                    page: 1,
+                    filter: selectedFilter.apiValue,
+                    sort: selectedSort.apiValue
+                )
+                adminWS.connect()
+            }
+            .onAppear {
+                withAnimation(.spring(response: 0.8, dampingFraction: 0.7)) {
+                    appeared = true
+                }
+            }
+            .onDisappear {
+                adminWS.disconnect()
+            }
+            .onChange(of: adminWS.userStatusUpdate) { _, update in
+                handleUserStatusUpdate(update)
+            }
+            .onChange(of: adminWS.messageUpdate) { _, update in
+                handleMessageUpdate(update)
+            }
+            .onChange(of: adminWS.newUser) { _, user in
+                handleNewUser(user)
+            }
+            .onChange(of: adminWS.suspendUpdate) { _, update in
+                handleSuspendUpdate(update)
+            }
+            .onChange(of: selectedFilter) { _, _ in
+                Task {
+                    await adminVM.loadUsers(
+                        page: 1,
+                        filter: selectedFilter.apiValue,
+                        sort: selectedSort.apiValue
+                    )
+                }
+            }
+            .onChange(of: selectedSort) { _, _ in
+                Task {
+                    await adminVM.loadUsers(
+                        page: 1,
+                        filter: selectedFilter.apiValue,
+                        sort: selectedSort.apiValue
+                    )
+                }
+            }
+            .refreshable {
+                await adminVM.loadUsers(
+                    page: 1,
+                    filter: selectedFilter.apiValue,
+                    sort: selectedSort.apiValue
+                )
+            }
+            .sheet(isPresented: $showUserDetails) {
+                if let user = selectedUser {
+                    AdminUserDetails(user: user, adminVM: adminVM)
+                }
+            }
+    }
+    
+    // MARK: - Main Content
+    
+    private var mainContent: some View {
         ZStack {
             AppTheme.GradientColors.deepBlack
                 .ignoresSafeArea()
@@ -81,73 +147,31 @@ struct AdminUserList: View {
             .opacity(appeared ? 1 : 0)
             .offset(y: appeared ? 0 : 20)
         }
-        .navigationTitle("Manage Users")
-        .navigationBarTitleDisplayMode(.inline)
-        .task {
-            await adminVM.loadUsers(
-                page: 1,
-                filter: selectedFilter.apiValue,
-                sort: selectedSort.apiValue
-            )
-            adminWS.connect()
+    }
+    
+    // MARK: - Event Handlers
+    
+    private func handleUserStatusUpdate(_ update: AdminUserStatusUpdate?) {
+        if let update = update {
+            adminVM.handleUserStatusUpdate(update)
         }
-        .onAppear {
-            withAnimation(.spring(response: 0.8, dampingFraction: 0.7)) {
-                appeared = true
-            }
+    }
+    
+    private func handleMessageUpdate(_ update: AdminMessageUpdate?) {
+        if let update = update {
+            adminVM.handleMessageUpdate(update)
         }
-        .onDisappear {
-            adminWS.disconnect()
+    }
+    
+    private func handleNewUser(_ user: AdminUser?) {
+        if let user = user {
+            adminVM.handleNewUser(user)
         }
-        .onChange(of: adminWS.userStatusUpdate) { _, update in
-            if let update = update {
-                adminVM.handleUserStatusUpdate(update)
-            }
-        }
-        .onChange(of: adminWS.messageUpdate) { _, update in
-            if let update = update {
-                adminVM.handleMessageUpdate(update)
-            }
-        }
-        .onChange(of: adminWS.newUser) { _, user in
-            if let user = user {
-                adminVM.handleNewUser(user)
-            }
-        }
-        .onChange(of: adminWS.suspendUpdate) { _, update in
-            if let update = update {
-                adminVM.handleSuspendUpdate(update)
-            }
-        }
-        .onChange(of: selectedFilter) { _, _ in
-            Task {
-                await adminVM.loadUsers(
-                    page: 1,
-                    filter: selectedFilter.apiValue,
-                    sort: selectedSort.apiValue
-                )
-            }
-        }
-        .onChange(of: selectedSort) { _, _ in
-            Task {
-                await adminVM.loadUsers(
-                    page: 1,
-                    filter: selectedFilter.apiValue,
-                    sort: selectedSort.apiValue
-                )
-            }
-        }
-        .refreshable {
-            await adminVM.loadUsers(
-                page: 1,
-                filter: selectedFilter.apiValue,
-                sort: selectedSort.apiValue
-            )
-        }
-        .sheet(isPresented: $showUserDetails) {
-            if let user = selectedUser {
-                AdminUserDetails(user: user, adminVM: adminVM)
-            }
+    }
+    
+    private func handleSuspendUpdate(_ update: AdminSuspendUpdate?) {
+        if let update = update {
+            adminVM.handleSuspendUpdate(update)
         }
     }
     

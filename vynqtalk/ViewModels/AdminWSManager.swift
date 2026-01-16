@@ -32,7 +32,6 @@ struct AdminWebSocketResponse: Decodable {
         let userRole: String?
         let status: String?
         let createdAt: Date?
-        let messageCount: Int?
         
         // Suspend update fields
         let suspended: Bool?
