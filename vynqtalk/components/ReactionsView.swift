@@ -15,7 +15,14 @@ struct ReactionsView: View {
     private var groupedReactions: [(emoji: String, count: Int, hasUserReacted: Bool)] {
         let grouped = Dictionary(grouping: reactions, by: { $0.emoji })
         return grouped.map { emoji, reactionList in
-            let hasUserReacted = reactionList.contains { $0.userId == currentUserId }
+            let hasUserReacted = reactionList.contains { reaction in
+                if let userId = reaction.userId {
+                    return userId == currentUserId
+                } else if let user = reaction.user, let id = user.id {
+                    return id == currentUserId
+                }
+                return false
+            }
             return (emoji: emoji, count: reactionList.count, hasUserReacted: hasUserReacted)
         }.sorted { $0.count > $1.count }
     }

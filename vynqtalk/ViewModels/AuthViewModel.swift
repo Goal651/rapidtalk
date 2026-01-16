@@ -30,6 +30,7 @@ class AuthViewModel:ObservableObject{
         UserDefaults.standard.removeObject(forKey: "user_name")
         UserDefaults.standard.removeObject(forKey: "user_email")
         UserDefaults.standard.removeObject(forKey: "user_id")
+        UserDefaults.standard.removeObject(forKey: "user_role")
         
         nav.popToRoot()
     }
@@ -57,6 +58,11 @@ class AuthViewModel:ObservableObject{
             UserDefaults.standard.set(loginData.user.name, forKey: "user_name")
             UserDefaults.standard.set(loginData.user.email, forKey: "user_email")
             UserDefaults.standard.set(loginData.user.id, forKey: "user_id")
+            
+            // Store user role for admin access
+            if let role = loginData.user.userRole {
+                UserDefaults.standard.set(role.rawValue, forKey: "user_role")
+            }
             
             loggedIn = true  
 
@@ -91,6 +97,11 @@ class AuthViewModel:ObservableObject{
             UserDefaults.standard.set(signupData.user.name, forKey: "user_name")
             UserDefaults.standard.set(signupData.user.email, forKey: "user_email")
             UserDefaults.standard.set(signupData.user.id, forKey: "user_id")
+            
+            // Store user role for admin access
+            if let role = signupData.user.userRole {
+                UserDefaults.standard.set(role.rawValue, forKey: "user_role")
+            }
             
             loggedIn = true 
 
