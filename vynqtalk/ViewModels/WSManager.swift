@@ -50,6 +50,7 @@ struct WebSocketResponse: Decodable {
         let userId: String?
         let online: Bool?
         let lastActive: Double?
+        let suspended: Bool?  // For user suspension
         
         // Online users array - bulk update
         let userIds: [String]?
@@ -68,19 +69,27 @@ struct WebSocketResponse: Decodable {
         let type: String?
         let fileName: String?
         let edited: Bool?
+        let replyTo: Message?  // Reply message
         
         // Reaction fields
         let emoji: String?
         let messageId: String?
+        let message: MessageReference?  // Backend sends message object with just id
+        let user: User?  // User who reacted
         let createdAt: Date?
         
+        // Nested message reference for reactions
+        struct MessageReference: Decodable {
+            let id: String
+        }
+        
         enum CodingKeys: String, CodingKey {
-            case userId, online, lastActive, userIds
+            case userId, online, lastActive, userIds, suspended
             case isTyping
-            case id, content, timestamp, type, fileName, edited
+            case id, content, timestamp, type, fileName, edited, replyTo
             case senderId, receiverId
             case sender, receiver
-            case emoji, messageId
+            case emoji, messageId, message, user
             case createdAt = "created_at"
         }
     }
@@ -88,16 +97,25 @@ struct WebSocketResponse: Decodable {
     var parsedData: WebSocketData? {
         guard let data = data else { return nil }
         
+        // Check if it's a user suspension event
+        if message == "user_suspended",
+           let userId = data.userId,
+           let suspended = data.suspended {
+            return .userSuspended(userId: userId, suspended: suspended)
+        }
+        
         // Check if it's a reaction
         if message == "reaction",
            let id = data.id,
            let emoji = data.emoji,
-           let userId = data.userId,
-           let messageId = data.messageId {
+           let user = data.user {
+            // Get messageId from the nested message object
+            let messageId = data.message?.id ?? data.messageId ?? ""
+            
             let reaction = ReactionUpdate(
                 id: id,
                 emoji: emoji,
-                userId: userId,
+                user: user,  // Full user object
                 messageId: messageId,
                 createdAt: data.createdAt
             )
@@ -163,7 +181,7 @@ struct WebSocketResponse: Decodable {
                 fileName: data.fileName,
                 edited: data.edited,
                 reactions: nil,
-                replyTo: nil
+                replyTo: data.replyTo  // Now includes reply message
             )
             return .message(msg)
         }
@@ -178,6 +196,7 @@ enum WebSocketData {
     case onlineUsersList([String])
     case typing(userId: String, isTyping: Bool)
     case reaction(ReactionUpdate)
+    case userSuspended(userId: String, suspended: Bool)
     case unknown
 }
 
@@ -190,12 +209,17 @@ struct UserStatus: Decodable {
 struct ReactionUpdate: Decodable {
     let id: String
     let emoji: String
-    let userId: String
+    let user: User?  // Full user object with name and avatar
     let messageId: String
     let createdAt: Date?
     
+    // Legacy support for userId field
+    var userId: String {
+        return user?.id ?? ""
+    }
+    
     enum CodingKeys: String, CodingKey {
-        case id, emoji, userId, messageId
+        case id, emoji, user, messageId
         case createdAt = "created_at"
     }
 }
@@ -210,7 +234,8 @@ final class WebSocketManager: ObservableObject {
     @Published var onlineUserIds: Set<String> = []
     @Published var reactionUpdate: ReactionUpdate?
     @Published var typingUsers: [String: Bool] = [:] 
-    @Published var userLastActiveCache: [String: Date] = [:] 
+    @Published var userLastActiveCache: [String: Date] = [:]
+    @Published var userSuspended: Bool = false  // Track if current user is suspended
     
     private var reconnectAttempts = 0
     private let maxReconnectAttempts = 5
@@ -425,8 +450,22 @@ final class WebSocketManager: ObservableObject {
             case .reaction(let reaction):
                 self?.reactionUpdate = reaction
                 #if DEBUG
-                print("✅ WebSocket: Received reaction \(reaction.emoji) for message \(reaction.messageId)")
+                let userName = reaction.user?.name ?? "Unknown"
+                print("✅ WebSocket: Received reaction \(reaction.emoji) from \(userName) for message \(reaction.messageId)")
                 #endif
+                
+            case .userSuspended(let userId, let suspended):
+                // Check if it's the current user
+                if userId == APIClient.shared.getUserId() {
+                    self?.userSuspended = suspended
+                    #if DEBUG
+                    print("⚠️ WebSocket: Current user has been \(suspended ? "suspended" : "unsuspended")")
+                    #endif
+                } else {
+                    #if DEBUG
+                    print("ℹ️ WebSocket: User \(userId) has been \(suspended ? "suspended" : "unsuspended")")
+                    #endif
+                }
                 
             case .unknown:
                 #if DEBUG
@@ -511,7 +550,7 @@ final class WebSocketManager: ObservableObject {
         guard let data = try? JSONEncoder().encode(reactionMessage),
               let string = String(data: data, encoding: .utf8) else {
             #if DEBUG
-            print("  Failed to encode reaction")
+            print("❌ Failed to encode reaction")
             #endif
             return
         }
@@ -524,11 +563,11 @@ final class WebSocketManager: ObservableObject {
         task?.send(.string(string)) { error in
             if let error = error {
                 #if DEBUG
-                print("  Failed to send reaction: \(error.localizedDescription)")
+                print("❌ Failed to send reaction: \(error.localizedDescription)")
                 #endif
             } else {
                 #if DEBUG
-                print("✅ WebSocket: Reaction sent")
+                print("✅ WebSocket: Reaction sent successfully")
                 #endif
             }
         }

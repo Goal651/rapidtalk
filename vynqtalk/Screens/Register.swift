@@ -400,9 +400,9 @@ struct ModernSuccessModal: View {
     private let confettiColors: [Color] = [
         AppTheme.AccentColors.primary,
         AppTheme.AccentColors.online,
-        Color(hex: "EC4899"),
-        Color(hex: "FB923C"),
-        Color(hex: "8B5CF6"),
-        AppTheme.AccentColors.secondary
+        Color(hex: "EC4899"),  // Pink
+        Color(hex: "FB923C"),  // Orange
+        Color(hex: "8B5CF6"),  // Purple
+        AppTheme.AccentColors.warning
     ]
 }

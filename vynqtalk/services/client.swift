@@ -92,6 +92,11 @@ final class APIClient: ObservableObject {
         authToken.isEmpty ? nil : authToken
     }
     
+    func getUserId() -> String? {
+        let userId = UserDefaults.standard.string(forKey: "user_id")
+        return userId?.isEmpty == false ? userId : nil
+    }
+    
     func saveAuthToken(_ token: String) {
         authToken = token
     }

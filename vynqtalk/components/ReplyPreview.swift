@@ -12,38 +12,71 @@ struct ReplyPreview: View {
     let onCancel: () -> Void
     
     var body: some View {
-        HStack(spacing: 12) {
-            // Reply indicator line
-            Rectangle()
+        HStack(spacing: 8) {
+            // Thin accent line
+            Capsule()
                 .fill(AppTheme.AccentColors.primary)
-                .frame(width: 3)
+                .frame(width: 2.5, height: 32)
             
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 1) {
                 Text(message.sender?.name ?? "Unknown")
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
                     .foregroundColor(AppTheme.AccentColors.primary)
                 
-                Text(previewText)
-                    .font(.system(size: 14, weight: .regular, design: .rounded))
-                    .foregroundColor(AppTheme.TextColors.secondary)
-                    .lineLimit(1)
+                HStack(spacing: 3) {
+                    if let typeIcon = messageTypeIcon {
+                        Text(typeIcon)
+                            .font(.system(size: 11))
+                    }
+                    
+                    Text(previewText)
+                        .font(.system(size: 12, weight: .regular, design: .rounded))
+                        .foregroundColor(AppTheme.TextColors.secondary)
+                        .lineLimit(1)
+                }
             }
             
-            Spacer()
+            Spacer(minLength: 8)
             
-            Button(action: onCancel) {
+            // Minimal X button
+            Button(action: {
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.impactOccurred()
+                onCancel()
+            }) {
                 Image(systemName: "xmark")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 11, weight: .bold))
                     .foregroundColor(AppTheme.TextColors.tertiary)
-                    .frame(width: 24, height: 24)
-                    .background(Circle().fill(.white.opacity(0.1)))
+                    .frame(width: 18, height: 18)
+                    .background(
+                        Circle()
+                            .fill(Color.white.opacity(0.08))
+                    )
             }
         }
-        .padding(12)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
         .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(AppTheme.SurfaceColors.surface)
+            RoundedRectangle(cornerRadius: 8)
+                .fill(AppTheme.SurfaceColors.base.opacity(0.6))
         )
+    }
+    
+    private var messageTypeIcon: String? {
+        let type = message.type ?? .text
+        
+        switch type {
+        case .text:
+            return nil
+        case .image:
+            return "📷"
+        case .video:
+            return "🎥"
+        case .audio:
+            return "🎵"
+        case .file:
+            return "📎"
+        }
     }
     
     private var previewText: String {
@@ -53,13 +86,13 @@ struct ReplyPreview: View {
         case .text:
             return message.content ?? ""
         case .image:
-            return "📷 Image"
+            return "Image"
         case .video:
-            return "🎥 Video"
+            return "Video"
         case .audio:
-            return "🎵 Audio"
+            return "Voice message"
         case .file:
-            return "📎 \(message.fileName ?? "File")"
+            return message.fileName ?? "File"
         }
     }
 }

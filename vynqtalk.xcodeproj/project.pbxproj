@@ -6,10 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		7568F9462EF0945B003F3AF6 /* SwiftStomp in Frameworks */ = {isa = PBXBuildFile; productRef = 7568F9452EF0945B003F3AF6 /* SwiftStomp */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXContainerItemProxy section */
 		756A20EF2EE85C4E00A52A61 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -56,7 +52,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7568F9462EF0945B003F3AF6 /* SwiftStomp in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -117,7 +112,6 @@
 			);
 			name = vynqtalk;
 			packageProductDependencies = (
-				7568F9452EF0945B003F3AF6 /* SwiftStomp */,
 			);
 			productName = vynqtalk;
 			productReference = 756A20DE2EE85C4D00A52A61 /* vynqtalk.app */;
@@ -202,7 +196,6 @@
 			mainGroup = 756A20D52EE85C4D00A52A61;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				7568F9412EF091F6003F3AF6 /* XCRemoteSwiftPackageReference "SwiftStomp" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 756A20DF2EE85C4D00A52A61 /* Products */;
@@ -412,6 +405,7 @@
 				INFOPLIST_FILE = "";
 				INFOPLIST_KEY_CFBundleDisplayName = RapidTalk;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "VynqTalk needs access to your microphone to record and send voice messages.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -447,6 +441,7 @@
 				INFOPLIST_FILE = "";
 				INFOPLIST_KEY_CFBundleDisplayName = RapidTalk;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "VynqTalk needs access to your microphone to record and send voice messages.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -575,25 +570,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		7568F9412EF091F6003F3AF6 /* XCRemoteSwiftPackageReference "SwiftStomp" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/Romixery/SwiftStomp.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.2.1;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		7568F9452EF0945B003F3AF6 /* SwiftStomp */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7568F9412EF091F6003F3AF6 /* XCRemoteSwiftPackageReference "SwiftStomp" */;
-			productName = SwiftStomp;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 756A20D62EE85C4D00A52A61 /* Project object */;
 }

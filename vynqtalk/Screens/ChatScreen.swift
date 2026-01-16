@@ -25,16 +25,20 @@ struct ChatScreen: View {
     @State private var isUploadingMedia = false
     @State private var scrollProxy: ScrollViewProxy?
     @State private var replyingTo: Message?
+    @State private var isRecordingVoice = false
+    
     let userId: String  // Changed from Int to String
     let userName: String
     let userAvatar: String?
     let initialLastActive: Date?
+    var isInSplitView: Bool = false  // New parameter for iPad split view
     
-    init(userId: String, userName: String, userAvatar: String?, initialLastActive: Date? = nil) {
+    init(userId: String, userName: String, userAvatar: String?, initialLastActive: Date? = nil, isInSplitView: Bool = false) {
         self.userId = userId
         self.userName = userName
         self.userAvatar = userAvatar
         self.initialLastActive = initialLastActive
+        self.isInSplitView = isInSplitView
         _userLastActive = State(initialValue: initialLastActive)
     }
     
@@ -71,8 +75,8 @@ struct ChatScreen: View {
     
     var body: some View {
         mainContent
-            .navigationBarBackButtonHidden()
-            .toolbar(.hidden, for: .tabBar)
+            .navigationBarBackButtonHidden(isInSplitView)  // Keep back button on iPhone
+            .toolbar(isInSplitView ? .visible : .hidden, for: .tabBar)  // Show tab bar on iPad split view
             .onAppear {
                 userOnlineStatus = wsM.isUserOnline(userId)
                 if let cachedLastActive = wsM.getLastActive(for: userId) {
@@ -112,20 +116,14 @@ struct ChatScreen: View {
     }
     
     private var mainContent: some View {
-        GeometryReader { geometry in
-            let spacing = ResponsiveSpacing(screenWidth: geometry.size.width)
+        ZStack {
+            AppTheme.BackgroundColors.primary
+                .ignoresSafeArea()
             
-            ZStack {
-                AnimatedGradientBackground()
-                    .ignoresSafeArea()
-                
-                VStack(spacing: 0) {
-                    chatHeader(spacing: spacing)
-                    messagesSection(spacing: spacing)
-                    inputBar(spacing: spacing)
-                }
-                .frame(maxWidth: spacing.contentMaxWidth)
-                .frame(width: geometry.size.width)
+            VStack(spacing: 0) {
+                chatHeader
+                messagesSection
+                inputBar
             }
         }
     }
@@ -172,13 +170,36 @@ struct ChatScreen: View {
     private func handleReactionUpdate() {
         guard let reaction = wsM.reactionUpdate else { return }
         
+        #if DEBUG
+        print("🔄 Processing reaction update for message: \(reaction.messageId)")
+        print("   Emoji: \(reaction.emoji)")
+        print("   User: \(reaction.user?.name ?? "Unknown")")
+        print("   Current messages count: \(messageVM.messages.count)")
+        #endif
+        
         // Find the message and update its reactions
-        if let message = messageVM.messages.first(where: { $0.id == reaction.messageId }) {
+        if let index = messageVM.messages.firstIndex(where: { $0.id == reaction.messageId }) {
+            let message = messageVM.messages[index]
             var updatedReactions = message.reactions ?? []
             
-            // Add the new reaction
-            let newReaction = Reaction(emoji: reaction.emoji, userId: reaction.userId)
+            #if DEBUG
+            print("   Found message at index \(index)")
+            print("   Current reactions: \(updatedReactions.count)")
+            #endif
+            
+            // Add the new reaction with full user object
+            let newReaction = Reaction(
+                id: reaction.id,
+                emoji: reaction.emoji,
+                userId: reaction.userId,
+                user: reaction.user,  // Include full user object
+                createdAt: reaction.createdAt
+            )
             updatedReactions.append(newReaction)
+            
+            #if DEBUG
+            print("   Updated reactions: \(updatedReactions.count)")
+            #endif
             
             // Update the message with new reactions
             let updatedMessage = Message(
@@ -196,7 +217,15 @@ struct ChatScreen: View {
             
             Task { @MainActor in
                 messageVM.updateMessage(updatedMessage)
+                #if DEBUG
+                print("✅ Message updated with new reaction")
+                #endif
             }
+        } else {
+            #if DEBUG
+            print("⚠️ Message not found for reaction update: \(reaction.messageId)")
+            print("   Available message IDs: \(messageVM.messages.compactMap { $0.id }.prefix(5))")
+            #endif
         }
     }
     
@@ -216,9 +245,12 @@ struct ChatScreen: View {
     
     // MARK: - Header
     
-    private func chatHeader(spacing: ResponsiveSpacing) -> some View {
+    private var chatHeader: some View {
         HStack(spacing: 12) {
-            backButton
+            // Only show back button on iPhone
+            if !isInSplitView {
+                backButton
+            }
             
             // Tappable user info section
             Button(action: {
@@ -234,7 +266,7 @@ struct ChatScreen: View {
             Spacer()
             moreOptionsButton
         }
-        .padding(.horizontal, spacing.horizontalPadding)
+        .padding(.horizontal, AppTheme.Layout.screenPadding)
         .padding(.vertical, 12)
         .background(headerBackground)
     }
@@ -242,10 +274,10 @@ struct ChatScreen: View {
     private var backButton: some View {
         Button(action: { dismiss() }) {
             Image(systemName: "chevron.left")
-                .font(.system(size: 18, weight: .semibold))
+                .font(.system(size: 17, weight: .semibold))
                 .foregroundColor(AppTheme.TextColors.primary)
-                .frame(width: 36, height: 36)
-                .background(Circle().fill(.white.opacity(0.1)))
+                .frame(width: AppTheme.Layout.iconButton, height: AppTheme.Layout.iconButton)
+                .background(Circle().fill(AppTheme.SurfaceColors.base))
         }
     }
     
@@ -281,7 +313,7 @@ struct ChatScreen: View {
                 defaultAvatar
             }
         }
-        .frame(width: 42, height: 42)
+        .frame(width: 40, height: 40)
         .clipShape(Circle())
         .overlay(avatarBorder)
         .overlay(onlineIndicator)
@@ -289,29 +321,19 @@ struct ChatScreen: View {
     
     private var avatarBorder: some View {
         Circle()
-            .stroke(
-                LinearGradient(
-                    colors: [
-                        AppTheme.AccentColors.primary,
-                        AppTheme.AccentColors.secondary
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ),
-                lineWidth: 2
-            )
+            .stroke(AppTheme.AccentColors.primary.opacity(0.5), lineWidth: 1.5)
     }
     
     private var onlineIndicator: some View {
         Circle()
-            .fill(userOnlineStatus ? AppTheme.AccentColors.success : .gray)
-            .frame(width: 12, height: 12)
-            .overlay(Circle().stroke(Color.black, lineWidth: 2))
-            .offset(x: 15, y: 15)
+            .fill(userOnlineStatus ? AppTheme.AccentColors.success : Color.clear)
+            .frame(width: 10, height: 10)
+            .overlay(Circle().stroke(AppTheme.BackgroundColors.primary, lineWidth: 2))
+            .offset(x: 14, y: 14)
     }
     
     private var userInfoView: some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 2) {
             Text(userName)
                 .foregroundColor(AppTheme.TextColors.primary)
                 .font(.system(size: 16, weight: .semibold, design: .rounded))
@@ -326,20 +348,20 @@ struct ChatScreen: View {
     private var moreOptionsButton: some View {
         Button(action: {}) {
             Image(systemName: "ellipsis")
-                .font(.system(size: 18, weight: .semibold))
+                .font(.system(size: 17, weight: .semibold))
                 .foregroundColor(AppTheme.TextColors.primary)
-                .frame(width: 36, height: 36)
-                .background(Circle().fill(.white.opacity(0.1)))
+                .frame(width: AppTheme.Layout.iconButton, height: AppTheme.Layout.iconButton)
+                .background(Circle().fill(AppTheme.SurfaceColors.base))
         }
     }
     
     private var headerBackground: some View {
-        Color.black.opacity(0.4)
+        AppTheme.BackgroundColors.secondary
             .overlay(
                 Rectangle()
                     .fill(
                         LinearGradient(
-                            colors: [.white.opacity(0.05), .clear],
+                            colors: [Color.white.opacity(0.03), Color.clear],
                             startPoint: .top,
                             endPoint: .bottom
                         )
@@ -349,10 +371,10 @@ struct ChatScreen: View {
     
     // MARK: - Messages Section
     
-    private func messagesSection(spacing: ResponsiveSpacing) -> some View {
+    private var messagesSection: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(spacing: 12) {
                     if messageVM.isLoading {
                         LoadingView(style: .spinner)
                             .padding(.top, 32)
@@ -389,8 +411,8 @@ struct ChatScreen: View {
                         }
                         .padding(AppTheme.Spacing.m)
                         .background(
-                            RoundedRectangle(cornerRadius: AppTheme.CornerRadius.l)
-                                .fill(AppTheme.SurfaceColors.surface)
+                            RoundedRectangle(cornerRadius: AppTheme.Layout.cornerRadiusMedium)
+                                .fill(AppTheme.SurfaceColors.base)
                         )
                         .id("uploading")
                     }
@@ -405,8 +427,8 @@ struct ChatScreen: View {
                         .frame(height: 1)
                         .id("bottom")
                 }
-                .padding(.horizontal, spacing.horizontalPadding)
-                .padding(.vertical, 20)
+                .padding(.horizontal, AppTheme.Layout.screenPadding)
+                .padding(.vertical, 16)
             }
             .onAppear {
                 scrollProxy = proxy
@@ -433,45 +455,68 @@ struct ChatScreen: View {
     
     // MARK: - Input Bar
     
-    private func inputBar(spacing: ResponsiveSpacing) -> some View {
+    private var inputBar: some View {
         VStack(spacing: 0) {
             // Reply preview
             if let replyMsg = replyingTo {
                 ReplyPreview(message: replyMsg) {
                     replyingTo = nil
                 }
-                .padding(.horizontal, spacing.horizontalPadding)
+                .padding(.horizontal, AppTheme.Layout.screenPadding)
                 .padding(.top, 8)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
             
-            HStack(spacing: 12) {
-                // Attachment button
-                Button(action: {
-                    showMediaPicker = true
-                }) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 28, weight: .semibold))
-                        .foregroundColor(AppTheme.AccentColors.primary)
+            if isRecordingVoice {
+                // Voice recorder interface
+                VoiceRecorderView(
+                    onSend: { data, duration in
+                        uploadAndSendVoiceNote(data: data, duration: duration)
+                        isRecordingVoice = false
+                    },
+                    onCancel: {
+                        isRecordingVoice = false
+                    }
+                )
+            } else {
+                // Normal message input
+                HStack(spacing: 10) {
+                    // Attachment button
+                    Button(action: {
+                        showMediaPicker = true
+                    }) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 26, weight: .semibold))
+                            .foregroundColor(AppTheme.AccentColors.primary)
+                    }
+                    .disabled(isUploadingMedia)
+                    
+                    messageTextField
+                    
+                    // Send button or voice note button
+                    if messageText.isEmpty {
+                        VoiceNoteButton {
+                            isRecordingVoice = true
+                        }
+                    } else {
+                        sendButton
+                    }
                 }
-                .disabled(isUploadingMedia)
-                
-                messageTextField
-                sendButton
+                .padding(.horizontal, AppTheme.Layout.screenPadding)
+                .padding(.vertical, 12)
             }
-            .padding(.horizontal, spacing.horizontalPadding)
-            .padding(.vertical, 16)
         }
-        .background(Color.black.opacity(0.3))
+        .background(AppTheme.BackgroundColors.secondary)
+        .animation(AppTheme.AnimationCurves.spring, value: isRecordingVoice)
     }
     
     private var messageTextField: some View {
         TextField("Message", text: $messageText)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 14)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
             .background(
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(AppTheme.SurfaceColors.surface)
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(AppTheme.SurfaceColors.base)
             )
             .foregroundColor(AppTheme.TextColors.primary)
             .font(.system(size: 16, weight: .medium, design: .rounded))
@@ -497,34 +542,24 @@ struct ChatScreen: View {
             Image(systemName: "paperplane.fill")
                 .foregroundColor(.white)
                 .font(.system(size: 16, weight: .semibold))
-                .frame(width: 48, height: 48)
+                .frame(width: 44, height: 44)
                 .background(sendButtonGradient)
                 .shadow(
                     color: AppTheme.AccentColors.primary.opacity(0.3),
-                    radius: 12,
-                    y: 4
+                    radius: 8,
+                    y: 2
                 )
         }
-        .scaleEffect(isSendButtonPressed ? 0.92 : 1.0)
+        .scaleEffect(isSendButtonPressed ? 0.94 : 1.0)
+        .animation(AppTheme.AnimationCurves.buttonPress, value: isSendButtonPressed)
         .onLongPressGesture(minimumDuration: .infinity, maximumDistance: .infinity, pressing: { pressing in
-            withAnimation(AppTheme.AnimationCurves.buttonPress) {
-                isSendButtonPressed = pressing
-            }
+            isSendButtonPressed = pressing
         }, perform: {})
     }
     
     private var sendButtonGradient: some View {
         Circle()
-            .fill(
-                LinearGradient(
-                    colors: [
-                        AppTheme.AccentColors.primary,
-                        Color(red: 0.45, green: 0.35, blue: 0.90)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
+            .fill(AppTheme.AccentColors.primary)
     }
     
     // MARK: - Default Avatar
@@ -533,16 +568,16 @@ struct ChatScreen: View {
         ZStack {
             LinearGradient(
                 colors: [
-                    AppTheme.AccentColors.primary,
-                    AppTheme.AccentColors.secondary
+                    AppTheme.AccentColors.primary.opacity(0.3),
+                    AppTheme.AccentColors.primary.opacity(0.2)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
             
             Image(systemName: "person.fill")
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(.white)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(AppTheme.TextColors.secondary)
         }
     }
     
@@ -632,10 +667,56 @@ struct ChatScreen: View {
                 
             } catch {
                 #if DEBUG
-                print("  Media upload error: \(error)")
+                print("❌ Media upload error: \(error)")
                 #endif
                 isUploadingMedia = false
                 selectedMedia = nil
+            }
+        }
+    }
+    
+    private func uploadAndSendVoiceNote(data: Data, duration: TimeInterval) {
+        isUploadingMedia = true
+        
+        Task {
+            do {
+                let filename = "voice_note_\(UUID().uuidString).m4a"
+                
+                #if DEBUG
+                print("🎤 Uploading voice note: \(data.count) bytes, duration: \(duration)s")
+                #endif
+                
+                // Upload voice note to REST endpoint
+                let response: APIResponse<String> = try await APIClient.shared.uploadMessageAttachment(
+                    fileData: data,
+                    filename: filename,
+                    mimeType: "audio/m4a"
+                )
+                
+                guard response.success, let fileURL = response.data else {
+                    throw NSError(domain: "Upload", code: -1, userInfo: [NSLocalizedDescriptionKey: response.message])
+                }
+                
+                #if DEBUG
+                print("✅ Voice note uploaded: \(fileURL)")
+                #endif
+                
+                // Send message via WebSocket with audio type
+                wsM.sendChatMessage(
+                    receiverId: userId,
+                    content: fileURL,
+                    type: .audio,
+                    replyToId: replyingTo?.id
+                )
+                
+                isUploadingMedia = false
+                replyingTo = nil
+                
+            } catch {
+                #if DEBUG
+                print("❌ Voice note upload error: \(error)")
+                #endif
+                isUploadingMedia = false
             }
         }
     }
@@ -857,37 +938,33 @@ struct InfoCard: View {
     let color: Color
     
     var body: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 14) {
             Image(systemName: icon)
-                .font(.system(size: 24, weight: .semibold))
+                .font(.system(size: 22, weight: .semibold))
                 .foregroundColor(color)
-                .frame(width: 48, height: 48)
+                .frame(width: 44, height: 44)
                 .background(
                     Circle()
-                        .fill(color.opacity(0.2))
+                        .fill(color.opacity(0.15))
                 )
             
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(title)
                     .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundColor(.white.opacity(0.6))
+                    .foregroundColor(AppTheme.TextColors.tertiary)
                 
                 Text(value)
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundColor(.white)
+                    .foregroundColor(AppTheme.TextColors.primary)
                     .lineLimit(1)
             }
             
             Spacer()
         }
-        .padding(20)
+        .padding(18)
         .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.white.opacity(0.08))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(.white.opacity(0.1), lineWidth: 1)
-                )
+            RoundedRectangle(cornerRadius: AppTheme.Layout.cornerRadiusMedium)
+                .fill(AppTheme.SurfaceColors.base)
         )
     }
 }

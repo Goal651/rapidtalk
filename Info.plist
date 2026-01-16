@@ -1,18 +1,19 @@
-//
-//  Info.plist
-//  vynqtalk
-//
-//  Created by wigothehacker on 12/15/25.
-//
-
-<key>NSAppTransportSecurity</key>
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
 <dict>
-    <key>NSExceptionDomains</key>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>VynqTalk needs access to your microphone to record and send voice messages.</string>
+    <key>NSAppTransportSecurity</key>
     <dict>
-        <key>127.0.0.1</key>
+        <key>NSExceptionDomains</key>
         <dict>
-            <key>NSTemporaryExceptionAllowsInsecureHTTPLoads</key>
-            <true/>
+            <key>127.0.0.1</key>
+            <dict>
+                <key>NSTemporaryExceptionAllowsInsecureHTTPLoads</key>
+                <true/>
+            </dict>
         </dict>
     </dict>
 </dict>
+</plist>

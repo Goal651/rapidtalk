@@ -15,6 +15,8 @@ struct MessageBubble: View {
     @State private var appeared = false
     @State private var showImageViewer = false
     @State private var showReactionPicker = false
+    @State private var swipeOffset: CGFloat = 0
+    @State private var showQuickReaction = false
 
     var isMe: Bool {
         message.sender?.id == authVM.userId
@@ -51,11 +53,101 @@ struct MessageBubble: View {
         // Check if it has actual content or is just a placeholder
         return replyTo.content != nil && !replyTo.content!.isEmpty
     }
+    
+    // MARK: - Swipe Gesture
+    
+    private var swipeGesture: some Gesture {
+        DragGesture()
+            .onChanged { value in
+                let translation = value.translation.width
+                
+                // Swipe left for sent messages (isMe), swipe right for received messages
+                if isMe {
+                    // Only allow left swipe (negative translation)
+                    if translation < 0 {
+                        swipeOffset = max(translation, -80)
+                        if translation < -30 {
+                            showQuickReaction = true
+                        }
+                    }
+                } else {
+                    // Only allow right swipe (positive translation)
+                    if translation > 0 {
+                        swipeOffset = min(translation, 80)
+                        if translation > 30 {
+                            showQuickReaction = true
+                        }
+                    }
+                }
+            }
+            .onEnded { value in
+                let translation = value.translation.width
+                let threshold: CGFloat = 60
+                
+                // Trigger reply if swiped far enough
+                if (isMe && translation < -threshold) || (!isMe && translation > threshold) {
+                    let generator = UIImpactFeedbackGenerator(style: .medium)
+                    generator.impactOccurred()
+                    onReply(message)
+                }
+                
+                // Reset swipe offset with animation
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    swipeOffset = 0
+                    showQuickReaction = false
+                }
+            }
+    }
+    
+    // MARK: - Quick Reaction Button
+    
+    private var quickReactionButton: some View {
+        Button(action: {
+            let generator = UIImpactFeedbackGenerator(style: .light)
+            generator.impactOccurred()
+            showReactionPicker = true
+            
+            // Reset swipe
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                swipeOffset = 0
+                showQuickReaction = false
+            }
+        }) {
+            Image(systemName: "heart.fill")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.white)
+                .frame(width: 36, height: 36)
+                .background(
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color(red: 1.0, green: 0.3, blue: 0.5),
+                                    Color(red: 1.0, green: 0.2, blue: 0.4)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                )
+                .shadow(
+                    color: Color(red: 1.0, green: 0.3, blue: 0.5).opacity(0.4),
+                    radius: 8,
+                    y: 2
+                )
+        }
+    }
 
     var body: some View {
         HStack(alignment: .bottom, spacing: AppTheme.Spacing.s) {
             if isMe {
                 Spacer()
+                
+                // Quick reaction button for sent messages (left side)
+                quickReactionButton
+                    .opacity(showQuickReaction ? 1 : 0)
+                    .scaleEffect(showQuickReaction ? 1 : 0.5)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: showQuickReaction)
             }
 
             // Message bubble with time below
@@ -72,7 +164,9 @@ struct MessageBubble: View {
                         fileMessageView
                     }
                 }
-                .frame(maxWidth: messageType == .text ? 260 : 280, alignment: isMe ? .trailing : .leading)
+                .frame(maxWidth: AppTheme.Layout.messageBubbleMaxWidth, alignment: isMe ? .trailing : .leading)
+                .offset(x: swipeOffset)
+                .gesture(swipeGesture)
                 .contextMenu {
                     Button(action: {
                         onReply(message)
@@ -102,6 +196,12 @@ struct MessageBubble: View {
             .accessibilityLabel(accessibilityDescription)
 
             if !isMe {
+                // Quick reaction button for received messages (right side)
+                quickReactionButton
+                    .opacity(showQuickReaction ? 1 : 0)
+                    .scaleEffect(showQuickReaction ? 1 : 0.5)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: showQuickReaction)
+                
                 Spacer()
             }
         }
@@ -245,31 +345,37 @@ struct MessageBubble: View {
                     .padding(.bottom, 8)
             }
             
-            HStack(spacing: 12) {
-                Image(systemName: messageType == .audio ? "waveform" : "doc.fill")
-                    .font(.system(size: 24))
-                    .foregroundColor(AppTheme.AccentColors.primary)
-                    .frame(width: 48, height: 48)
-                    .background(Circle().fill(AppTheme.AccentColors.primary.opacity(0.2)))
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(message.fileName ?? "File")
-                        .font(AppTheme.Typography.body)
-                        .foregroundColor(AppTheme.TextColors.primary)
-                        .lineLimit(1)
+            if messageType == .audio, let url = fileURL {
+                // Audio player for voice notes
+                AudioPlayerView(audioURL: url, isMe: isMe)
+            } else {
+                // Regular file view
+                HStack(spacing: 12) {
+                    Image(systemName: "doc.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(AppTheme.AccentColors.primary)
+                        .frame(width: 48, height: 48)
+                        .background(Circle().fill(AppTheme.AccentColors.primary.opacity(0.2)))
                     
-                    Text(messageType == .audio ? "Audio" : "File")
-                        .font(AppTheme.Typography.caption)
-                        .foregroundColor(AppTheme.TextColors.tertiary)
-                }
-                
-                Spacer()
-                
-                if let url = fileURL {
-                    Link(destination: url) {
-                        Image(systemName: "arrow.down.circle.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(AppTheme.AccentColors.primary)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(message.fileName ?? "File")
+                            .font(AppTheme.Typography.body)
+                            .foregroundColor(AppTheme.TextColors.primary)
+                            .lineLimit(1)
+                        
+                        Text("File")
+                            .font(AppTheme.Typography.caption)
+                            .foregroundColor(AppTheme.TextColors.tertiary)
+                    }
+                    
+                    Spacer()
+                    
+                    if let url = fileURL {
+                        Link(destination: url) {
+                            Image(systemName: "arrow.down.circle.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(AppTheme.AccentColors.primary)
+                        }
                     }
                 }
             }
@@ -289,25 +395,11 @@ struct MessageBubble: View {
     private var messageBubbleBackground: some View {
         Group {
             if isMe {
-                // Vibrant purple gradient for sent messages
-                LinearGradient(
-                    colors: [
-                        AppTheme.MessageColors.sentStart,
-                        AppTheme.MessageColors.sentEnd
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
+                // Solid blue for sent messages
+                AppTheme.MessageColors.sent
             } else {
-                // Elevated dark surface for received messages
+                // Dark gray for received messages
                 AppTheme.MessageColors.received
-                    .overlay(
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.05), Color.clear],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
             }
         }
     }

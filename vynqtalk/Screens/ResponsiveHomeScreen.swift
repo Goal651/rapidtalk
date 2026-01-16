@@ -51,7 +51,8 @@ struct ResponsiveHomeScreen: View {
                     userId: userId,
                     userName: userName,
                     userAvatar: selectedUserAvatar,
-                    initialLastActive: selectedUserLastActive
+                    initialLastActive: selectedUserLastActive,
+                    isInSplitView: true  // Tell ChatScreen it's in split view
                 )
                 .id(userId) // Force refresh when user changes
             } else {
@@ -79,11 +80,11 @@ struct ResponsiveHomeScreen: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Messages")
                 .font(.system(size: 32, weight: .bold, design: .rounded))
-                .foregroundColor(.white)
+                .foregroundColor(AppTheme.TextColors.primary)
             
             Text("Stay connected with friends")
                 .font(.system(size: 16, weight: .medium, design: .rounded))
-                .foregroundColor(.white.opacity(0.7))
+                .foregroundColor(AppTheme.TextColors.tertiary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 24)
@@ -183,7 +184,7 @@ struct SplitViewUserRow: View {
                             .frame(width: 16, height: 16)
                             .overlay(
                                 Circle()
-                                    .stroke(AppTheme.GradientColors.deepBlack, lineWidth: 3)
+                                    .stroke(AppTheme.BackgroundColors.primary, lineWidth: 3)
                             )
                             .offset(x: 2, y: 2)
                     }
@@ -193,7 +194,7 @@ struct SplitViewUserRow: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(user.name ?? "Unknown User")
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .foregroundColor(.white)
+                        .foregroundColor(AppTheme.TextColors.primary)
                         .lineLimit(1)
                     
                     HStack(spacing: 8) {
@@ -222,7 +223,7 @@ struct SplitViewUserRow: View {
                         else {
                             Text(user.bio ?? user.email ?? "Start a conversation")
                                 .font(.system(size: 14, weight: .medium, design: .rounded))
-                                .foregroundColor(.white.opacity(0.7))
+                                .foregroundColor(AppTheme.TextColors.tertiary)
                                 .lineLimit(1)
                         }
                     }
@@ -233,12 +234,12 @@ struct SplitViewUserRow: View {
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(isSelected ? AppTheme.AccentColors.primary.opacity(0.2) : .white.opacity(0.08))
+                    .fill(isSelected ? AppTheme.AccentColors.primary.opacity(0.2) : AppTheme.SurfaceColors.base)
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
                             .stroke(
-                                isSelected ? AppTheme.AccentColors.primary : .white.opacity(0.1),
-                                lineWidth: isSelected ? 2 : 1
+                                isSelected ? AppTheme.AccentColors.primary : Color.clear,
+                                lineWidth: isSelected ? 2 : 0
                             )
                     )
             )
@@ -281,7 +282,7 @@ struct SplitViewUserRow: View {
                 LinearGradient(
                     colors: [
                         AppTheme.AccentColors.primary.opacity(0.3),
-                        AppTheme.AccentColors.secondary.opacity(0.3)
+                        AppTheme.AccentColors.primary.opacity(0.2)
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -290,11 +291,7 @@ struct SplitViewUserRow: View {
             .overlay(
                 Image(systemName: "person.fill")
                     .font(.system(size: 24, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.8))
-            )
-            .overlay(
-                Circle()
-                    .stroke(.white.opacity(0.2), lineWidth: 2)
+                    .foregroundColor(AppTheme.TextColors.secondary)
             )
     }
 }

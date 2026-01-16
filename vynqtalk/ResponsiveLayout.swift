@@ -51,14 +51,14 @@ struct ResponsiveSpacing {
         self.sizeCategory = DeviceSizeCategory.from(width: screenWidth)
     }
     
-    /// Horizontal padding as percentage of screen width
+    /// Horizontal padding - fixed values
     var horizontalPadding: CGFloat {
-        screenWidth * 0.06  // 6% of screen width
+        sizeCategory == .tablet ? AppTheme.Layout.screenPaddingIPad : AppTheme.Layout.screenPadding
     }
     
     /// Content max width for readability
     var contentMaxWidth: CGFloat {
-        min(screenWidth * 0.9, 600)  // 90% of screen, max 600pt
+        sizeCategory == .tablet ? AppTheme.Layout.maxContentWidth : screenWidth
     }
     
     /// Vertical spacing between major sections
@@ -67,11 +67,11 @@ struct ResponsiveSpacing {
         case .compact:
             return AppTheme.Spacing.l
         case .regular:
-            return AppTheme.Spacing.xl
+            return AppTheme.Layout.sectionSpacing
         case .large:
-            return AppTheme.Spacing.xxl
+            return AppTheme.Layout.sectionSpacing
         case .tablet:
-            return AppTheme.Spacing.xxl
+            return 40
         }
     }
     
@@ -79,13 +79,13 @@ struct ResponsiveSpacing {
     var topPadding: CGFloat {
         switch sizeCategory {
         case .compact:
-            return AppTheme.Spacing.l
+            return AppTheme.Spacing.m
         case .regular:
-            return AppTheme.Spacing.xl
+            return AppTheme.Spacing.l
         case .large:
-            return AppTheme.Spacing.xxl
+            return AppTheme.Spacing.l
         case .tablet:
-            return AppTheme.Spacing.xxl
+            return AppTheme.Layout.sectionSpacing
         }
     }
     
@@ -95,11 +95,11 @@ struct ResponsiveSpacing {
         case .compact:
             return AppTheme.Spacing.l
         case .regular:
-            return AppTheme.Spacing.xl
+            return AppTheme.Layout.sectionSpacing
         case .large:
-            return AppTheme.Spacing.xxl
+            return AppTheme.Layout.sectionSpacing
         case .tablet:
-            return AppTheme.Spacing.xxl
+            return 40
         }
     }
     
@@ -113,7 +113,7 @@ struct ResponsiveSpacing {
         case .large:
             return AppTheme.Spacing.l
         case .tablet:
-            return AppTheme.Spacing.xl
+            return AppTheme.Layout.sectionSpacing
         }
     }
     
@@ -121,13 +121,13 @@ struct ResponsiveSpacing {
     var iconScale: CGFloat {
         switch sizeCategory {
         case .compact:
-            return 0.85
+            return 0.9
         case .regular:
             return 1.0
         case .large:
-            return 1.15
+            return 1.0
         case .tablet:
-            return 1.2
+            return 1.1
         }
     }
     
@@ -138,12 +138,12 @@ struct ResponsiveSpacing {
     
     /// User list width for split view (iPad only)
     var userListWidth: CGFloat {
-        return screenWidth * 0.35  // 35% for user list
+        return AppTheme.Layout.sidebarWidth
     }
     
     /// Chat width for split view (iPad only)
     var chatWidth: CGFloat {
-        return screenWidth * 0.65  // 65% for chat
+        return screenWidth - AppTheme.Layout.sidebarWidth
     }
 }
 

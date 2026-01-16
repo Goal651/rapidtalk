@@ -2,7 +2,7 @@
 //  AnimatedGradientBackground.swift
 //  vynqtalk
 //
-//  Animated gradient background component with configurable colors and animation
+//  Subtle animated gradient background with premium dark theme
 //
 
 import SwiftUI
@@ -12,10 +12,10 @@ struct AnimatedGradientBackground: View {
     // MARK: - Properties
     
     var colors: [Color]
-    var animationDuration: Double = 3.0
+    var animationDuration: Double = 8.0
     var startPoint: UnitPoint = .topLeading
     var endPoint: UnitPoint = .bottomTrailing
-    var animates: Bool = true
+    var animates: Bool = false  // Disabled by default for cleaner look
     
     // MARK: - State
     
@@ -25,16 +25,16 @@ struct AnimatedGradientBackground: View {
     
     init(
         colors: [Color]? = nil,
-        animationDuration: Double = 3.0,
+        animationDuration: Double = 8.0,
         startPoint: UnitPoint = .topLeading,
         endPoint: UnitPoint = .bottomTrailing,
-        animates: Bool = true
+        animates: Bool = false
     ) {
-        // Use provided colors or default to primary gradient colors
+        // Use provided colors or default to subtle dark gradient
         self.colors = colors ?? [
-            AppTheme.GradientColors.deepNavyBlack,
-            AppTheme.GradientColors.midnightBlue,
-            AppTheme.GradientColors.softBlue
+            AppTheme.BackgroundColors.primary,
+            AppTheme.BackgroundColors.secondary,
+            AppTheme.BackgroundColors.tertiary
         ]
         self.animationDuration = animationDuration
         self.startPoint = startPoint
@@ -61,7 +61,7 @@ struct AnimatedGradientBackground: View {
                     startPoint: animateGradient ? endPoint : startPoint,
                     endPoint: animateGradient ? startPoint : endPoint
                 )
-                .opacity(0.5)
+                .opacity(0.3)
                 .ignoresSafeArea()
                 .onAppear {
                     withAnimation(
@@ -73,7 +73,6 @@ struct AnimatedGradientBackground: View {
                 }
             }
         }
-        .drawingGroup() // Optimize complex gradient animations
     }
 }
 

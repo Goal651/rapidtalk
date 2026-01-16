@@ -13,7 +13,6 @@ struct HomeScreen: View {
     
     @State private var searchText: String = ""
     @State private var tappedUserId: String? = nil
-    @State private var appeared = false
     @State private var showNewChatSheet = false
     
     var filteredUsers: [User] {
@@ -34,22 +33,20 @@ struct HomeScreen: View {
     
     var body: some View {
         ZStack {
-            // Deep black background like onboarding
-            AppTheme.GradientColors.deepBlack
+            // Clean dark background
+            AppTheme.BackgroundColors.primary
                 .ignoresSafeArea()
             
             VStack(spacing: 0) {
                 // Header
                 headerSection
                 
-                // Search and filters
-                searchAndFiltersSection
+                // Search
+                searchSection
                 
                 // Chat list
                 chatListSection
             }
-            .opacity(appeared ? 1 : 0)
-            .offset(y: appeared ? 0 : 20)
             
             // Floating New Chat Button
             VStack {
@@ -60,17 +57,12 @@ struct HomeScreen: View {
                         icon: "plus.message.fill",
                         action: { showNewChatSheet = true }
                     )
-                    .padding(.trailing, 24)
-                    .padding(.bottom, 100) // Above tab bar
+                    .padding(.trailing, AppTheme.Layout.screenPadding)
+                    .padding(.bottom, 90)
                 }
             }
         }
         .navigationBarBackButtonHidden()
-        .onAppear {
-            withAnimation(.spring(response: 0.8, dampingFraction: 0.7)) {
-                appeared = true
-            }
-        }
         .task {
             await userVM.loadUsers()
         }
@@ -87,14 +79,14 @@ struct HomeScreen: View {
     @ViewBuilder
     private var headerSection: some View {
         HStack {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text("Messages")
                     .font(.system(size: 32, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
+                    .foregroundColor(AppTheme.TextColors.primary)
                 
                 Text("Stay connected with friends")
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
-                    .foregroundColor(.white.opacity(0.7))
+                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                    .foregroundColor(AppTheme.TextColors.tertiary)
             }
             
             Spacer()
@@ -102,34 +94,27 @@ struct HomeScreen: View {
             // Profile button
             Button(action: {}) {
                 Circle()
-                    .fill(.white.opacity(0.1))
-                    .frame(width: 44, height: 44)
+                    .fill(AppTheme.SurfaceColors.base)
+                    .frame(width: AppTheme.Layout.iconButton, height: AppTheme.Layout.iconButton)
                     .overlay(
                         Image(systemName: "person.crop.circle.fill")
-                            .font(.system(size: 24, weight: .semibold))
-                            .foregroundColor(.white.opacity(0.8))
-                    )
-                    .overlay(
-                        Circle()
-                            .stroke(.white.opacity(0.2), lineWidth: 1)
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundColor(AppTheme.TextColors.secondary)
                     )
             }
         }
-        .padding(.horizontal, 24)
-        .padding(.top, 16)
-        .padding(.bottom, 24)
+        .padding(.horizontal, AppTheme.Layout.screenPadding)
+        .padding(.top, 12)
+        .padding(.bottom, 20)
     }
     
     // MARK: - Search Section
     
     @ViewBuilder
-    private var searchAndFiltersSection: some View {
-        VStack(spacing: 20) {
-            // Modern Search Bar
-            ModernSearchBar(text: $searchText)
-                .padding(.horizontal, 24)
-        }
-        .padding(.bottom, 24)
+    private var searchSection: some View {
+        ModernSearchBar(text: $searchText)
+            .padding(.horizontal, AppTheme.Layout.screenPadding)
+            .padding(.bottom, 20)
     }
     
     // MARK: - Chat List Section
@@ -148,23 +133,18 @@ struct HomeScreen: View {
                     ModernEmptyStateView()
                         .padding(.top, 40)
                 } else {
-                    ForEach(Array(filteredUsers.enumerated()), id: \.element.id) { index, user in
+                    ForEach(filteredUsers) { user in
                         ModernChatListItem(
                             user: user,
                             isPressed: tappedUserId == user.id
                         ) {
                             handleChatTap(user: user)
                         }
-                        .transition(.asymmetric(
-                            insertion: .move(edge: .trailing).combined(with: .opacity),
-                            removal: .move(edge: .leading).combined(with: .opacity)
-                        ))
-                        .animation(.spring(response: 0.5, dampingFraction: 0.8).delay(Double(index) * 0.05), value: appeared)
                     }
                 }
             }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 120) // Space for tab bar and floating button
+            .padding(.horizontal, AppTheme.Layout.screenPadding)
+            .padding(.bottom, 100)
         }
     }
     
@@ -173,7 +153,7 @@ struct HomeScreen: View {
     private func handleChatTap(user: User) {
         guard let id = user.id else { return }
         
-        let generator = UIImpactFeedbackGenerator(style: .medium)
+        let generator = UIImpactFeedbackGenerator(style: .light)
         generator.impactOccurred()
         
         tappedUserId = id
@@ -195,17 +175,16 @@ struct HomeScreen: View {
 struct ModernSearchBar: View {
     @Binding var text: String
     @FocusState private var isFocused: Bool
-    @State private var appeared = false
     
     var body: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 12) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 18, weight: .medium))
-                .foregroundColor(isFocused ? AppTheme.AccentColors.primary : .white.opacity(0.5))
+                .font(.system(size: 17, weight: .medium))
+                .foregroundColor(isFocused ? AppTheme.AccentColors.primary : AppTheme.TextColors.tertiary)
             
             TextField("Search conversations...", text: $text)
                 .font(.system(size: 16, weight: .medium, design: .rounded))
-                .foregroundColor(.white)
+                .foregroundColor(AppTheme.TextColors.primary)
                 .focused($isFocused)
                 .submitLabel(.search)
             
@@ -214,39 +193,26 @@ struct ModernSearchBar: View {
                     text = ""
                 }) {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(.white.opacity(0.5))
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundColor(AppTheme.TextColors.tertiary)
                 }
                 .transition(.scale.combined(with: .opacity))
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
         .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.white.opacity(isFocused ? 0.12 : 0.08))
+            RoundedRectangle(cornerRadius: AppTheme.Layout.cornerRadiusMedium)
+                .fill(AppTheme.SurfaceColors.base)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16)
+                    RoundedRectangle(cornerRadius: AppTheme.Layout.cornerRadiusMedium)
                         .stroke(
-                            isFocused ? AppTheme.AccentColors.primary.opacity(0.6) : .white.opacity(0.2),
-                            lineWidth: isFocused ? 2 : 1
+                            isFocused ? AppTheme.AccentColors.primary.opacity(0.5) : Color.clear,
+                            lineWidth: 1.5
                         )
                 )
         )
-        .scaleEffect(isFocused ? 1.02 : 1.0)
-        .shadow(
-            color: isFocused ? AppTheme.AccentColors.primary.opacity(0.2) : .clear,
-            radius: isFocused ? 12 : 0,
-            y: isFocused ? 4 : 0
-        )
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 20)
-        .onAppear {
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.1)) {
-                appeared = true
-            }
-        }
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isFocused)
+        .animation(AppTheme.AnimationCurves.spring, value: isFocused)
     }
 }
 
@@ -257,7 +223,6 @@ struct ModernChatListItem: View {
     let user: User
     var isPressed: Bool = false
     let action: () -> Void
-    @State private var appeared = false
     
     private var isOnline: Bool {
         guard let userId = user.id else { return false }
@@ -270,13 +235,11 @@ struct ModernChatListItem: View {
     }
     
     private var lastActiveText: String {
-        // First try to get from WebSocket cache
         if let userId = user.id,
            let cachedLastActive = wsM.getLastActive(for: userId) {
             return formatLastActive(cachedLastActive)
         }
         
-        // Fall back to user's lastActive property
         guard let lastActive = user.lastActive else { return "" }
         return formatLastActive(lastActive)
     }
@@ -305,56 +268,51 @@ struct ModernChatListItem: View {
     
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 16) {
+            HStack(spacing: 14) {
                 // Avatar with online indicator
                 ZStack(alignment: .bottomTrailing) {
                     avatar
-                        .frame(width: 56, height: 56)
+                        .frame(width: AppTheme.Layout.avatarMedium, height: AppTheme.Layout.avatarMedium)
                     
                     // Online indicator
                     if isOnline {
                         Circle()
                             .fill(AppTheme.AccentColors.online)
-                            .frame(width: 16, height: 16)
+                            .frame(width: 14, height: 14)
                             .overlay(
                                 Circle()
-                                    .stroke(AppTheme.GradientColors.deepBlack, lineWidth: 3)
+                                    .stroke(AppTheme.BackgroundColors.primary, lineWidth: 2.5)
                             )
                             .offset(x: 2, y: 2)
                     }
                 }
                 
                 // User info
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 5) {
                     HStack {
                         Text(user.name ?? "Unknown User")
                             .font(.system(size: 16, weight: .semibold, design: .rounded))
-                            .foregroundColor(.white)
+                            .foregroundColor(AppTheme.TextColors.primary)
                         
                         Spacer()
                         
-                        // Show last active time if not online and not typing
                         if !isOnline && !isTyping && !lastActiveText.isEmpty {
                             Text(lastActiveText)
                                 .font(.system(size: 12, weight: .medium, design: .rounded))
-                                .foregroundColor(.white.opacity(0.5))
+                                .foregroundColor(AppTheme.TextColors.quaternary)
                         }
                     }
                     
-                    HStack(spacing: 8) {
-                        // Show typing indicator if user is typing
+                    HStack(spacing: 6) {
                         if isTyping {
                             HStack(spacing: 4) {
                                 TypingDotsSmall()
-                                
                                 Text("typing")
                                     .font(.system(size: 14, weight: .medium, design: .rounded))
                                     .foregroundColor(AppTheme.AccentColors.primary)
                             }
-                        }
-                        // Show "Active now" if online but not typing
-                        else if isOnline {
-                            HStack(spacing: 6) {
+                        } else if isOnline {
+                            HStack(spacing: 5) {
                                 Circle()
                                     .fill(AppTheme.AccentColors.online)
                                     .frame(width: 6, height: 6)
@@ -363,18 +321,15 @@ struct ModernChatListItem: View {
                                     .font(.system(size: 14, weight: .medium, design: .rounded))
                                     .foregroundColor(AppTheme.AccentColors.online)
                             }
-                        }
-                        // Show bio/email if offline
-                        else {
+                        } else {
                             Text(user.bio ?? user.email ?? "Start a conversation")
                                 .font(.system(size: 14, weight: .medium, design: .rounded))
-                                .foregroundColor(.white.opacity(0.7))
+                                .foregroundColor(AppTheme.TextColors.tertiary)
                                 .lineLimit(1)
                         }
                         
                         Spacer()
                         
-                        // Unread badge (placeholder)
                         if let unreadCount = user.unreadMessages?.count, unreadCount > 0 {
                             Circle()
                                 .fill(AppTheme.AccentColors.primary)
@@ -383,30 +338,14 @@ struct ModernChatListItem: View {
                     }
                 }
             }
-            .padding(20)
+            .padding(16)
             .background(
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(.white.opacity(isPressed ? 0.15 : 0.08))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(.white.opacity(0.1), lineWidth: 1)
-                    )
-            )
-            .scaleEffect(isPressed ? 0.96 : 1.0)
-            .shadow(
-                color: .black.opacity(0.1),
-                radius: 8,
-                y: 4
+                RoundedRectangle(cornerRadius: AppTheme.Layout.cornerRadiusMedium)
+                    .fill(isPressed ? AppTheme.SurfaceColors.elevated : AppTheme.SurfaceColors.base)
             )
         }
         .buttonStyle(PlainButtonStyle())
-        .opacity(appeared ? 1 : 0)
-        .offset(x: appeared ? 0 : 50)
-        .onAppear {
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                appeared = true
-            }
-        }
+        .animation(AppTheme.AnimationCurves.buttonPress, value: isPressed)
     }
     
     @ViewBuilder
@@ -416,12 +355,12 @@ struct ModernChatListItem: View {
                 switch phase {
                 case .empty:
                     ProgressView()
-                        .frame(width: 56, height: 56)
+                        .frame(width: AppTheme.Layout.avatarMedium, height: AppTheme.Layout.avatarMedium)
                 case .success(let image):
                     image
                         .resizable()
                         .scaledToFill()
-                        .frame(width: 56, height: 56)
+                        .frame(width: AppTheme.Layout.avatarMedium, height: AppTheme.Layout.avatarMedium)
                         .clipShape(Circle())
                 case .failure:
                     defaultAvatar
@@ -429,10 +368,6 @@ struct ModernChatListItem: View {
                     defaultAvatar
                 }
             }
-            .overlay(
-                Circle()
-                    .stroke(.white.opacity(0.2), lineWidth: 2)
-            )
         } else {
             defaultAvatar
         }
@@ -444,7 +379,7 @@ struct ModernChatListItem: View {
                 LinearGradient(
                     colors: [
                         AppTheme.AccentColors.primary.opacity(0.3),
-                        AppTheme.AccentColors.secondary.opacity(0.3)
+                        AppTheme.AccentColors.primary.opacity(0.2)
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -453,11 +388,7 @@ struct ModernChatListItem: View {
             .overlay(
                 Image(systemName: "person.fill")
                     .font(.system(size: 24, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.8))
-            )
-            .overlay(
-                Circle()
-                    .stroke(.white.opacity(0.2), lineWidth: 2)
+                    .foregroundColor(AppTheme.TextColors.secondary)
             )
     }
 }
@@ -465,23 +396,15 @@ struct ModernChatListItem: View {
 // MARK: - Supporting Views
 
 struct ModernLoadingView: View {
-    @State private var appeared = false
-    
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 16) {
             ProgressView()
                 .progressViewStyle(CircularProgressViewStyle(tint: AppTheme.AccentColors.primary))
                 .scaleEffect(1.2)
             
             Text("Loading conversations...")
-                .font(.system(size: 16, weight: .medium, design: .rounded))
-                .foregroundColor(.white.opacity(0.7))
-        }
-        .opacity(appeared ? 1 : 0)
-        .onAppear {
-            withAnimation(.easeOut(duration: 0.5)) {
-                appeared = true
-            }
+                .font(.system(size: 15, weight: .medium, design: .rounded))
+                .foregroundColor(AppTheme.TextColors.tertiary)
         }
     }
 }
@@ -497,40 +420,31 @@ struct ModernErrorView: View {
             
             Text("Something went wrong")
                 .font(.system(size: 18, weight: .bold, design: .rounded))
-                .foregroundColor(.white)
+                .foregroundColor(AppTheme.TextColors.primary)
             
             Text(message)
                 .font(.system(size: 14, weight: .medium, design: .rounded))
-                .foregroundColor(.white.opacity(0.7))
+                .foregroundColor(AppTheme.TextColors.tertiary)
                 .multilineTextAlignment(.center)
         }
     }
 }
 
 struct ModernEmptyStateView: View {
-    @State private var appeared = false
-    
     var body: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 20) {
             Image(systemName: "bubble.left.and.bubble.right.fill")
-                .font(.system(size: 60, weight: .semibold))
-                .foregroundColor(.white.opacity(0.3))
+                .font(.system(size: 56, weight: .semibold))
+                .foregroundColor(AppTheme.TextColors.quaternary)
             
-            VStack(spacing: 8) {
+            VStack(spacing: 6) {
                 Text("No conversations yet")
                     .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
+                    .foregroundColor(AppTheme.TextColors.primary)
                 
                 Text("Start chatting with someone!")
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
-                    .foregroundColor(.white.opacity(0.7))
-            }
-        }
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 30)
-        .onAppear {
-            withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.2)) {
-                appeared = true
+                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                    .foregroundColor(AppTheme.TextColors.tertiary)
             }
         }
     }
@@ -541,56 +455,37 @@ struct ModernEmptyStateView: View {
 struct FloatingActionButton: View {
     let icon: String
     let action: () -> Void
-    @State private var appeared = false
     @State private var isPressed = false
     
     var body: some View {
         Button(action: {
-            let generator = UIImpactFeedbackGenerator(style: .medium)
+            let generator = UIImpactFeedbackGenerator(style: .light)
             generator.impactOccurred()
             action()
         }) {
             Image(systemName: icon)
-                .font(.system(size: 24, weight: .semibold))
+                .font(.system(size: 22, weight: .semibold))
                 .foregroundColor(.white)
                 .frame(width: 56, height: 56)
                 .background(
                     Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    AppTheme.AccentColors.primary,
-                                    AppTheme.AccentColors.secondary
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+                        .fill(AppTheme.AccentColors.primary)
                 )
                 .shadow(
                     color: AppTheme.AccentColors.primary.opacity(0.4),
-                    radius: 20,
-                    y: 8
+                    radius: isPressed ? 12 : 16,
+                    y: isPressed ? 4 : 6
                 )
         }
-        .scaleEffect(isPressed ? 0.9 : (appeared ? 1 : 0))
-        .opacity(appeared ? 1 : 0)
-        .onAppear {
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.5)) {
-                appeared = true
-            }
-        }
+        .scaleEffect(isPressed ? 0.94 : 1.0)
+        .animation(AppTheme.AnimationCurves.buttonPress, value: isPressed)
         .simultaneousGesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { _ in
-                    withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
-                        isPressed = true
-                    }
+                    isPressed = true
                 }
                 .onEnded { _ in
-                    withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
-                        isPressed = false
-                    }
+                    isPressed = false
                 }
         )
     }
@@ -604,13 +499,13 @@ struct NewChatSheet: View {
     var body: some View {
         NavigationView {
             ZStack {
-                AppTheme.GradientColors.deepBlack
+                AppTheme.BackgroundColors.primary
                     .ignoresSafeArea()
                 
                 VStack {
                     Text("Start a new conversation")
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
+                        .font(.system(size: 17, weight: .semibold, design: .rounded))
+                        .foregroundColor(AppTheme.TextColors.primary)
                         .padding()
                     
                     Spacer()
@@ -623,7 +518,7 @@ struct NewChatSheet: View {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(.white)
+                    .foregroundColor(AppTheme.AccentColors.primary)
                 }
             }
         }

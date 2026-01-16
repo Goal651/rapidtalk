@@ -2,7 +2,7 @@
 //  ModernTextField.swift
 //  vynqtalk
 //
-//  Modern text field component matching onboarding design
+//  Premium text field component with simplified animations
 //
 
 import SwiftUI
@@ -22,23 +22,22 @@ struct ModernTextField: View {
     @FocusState private var isFocused: Bool
     @State private var showError: Bool = false
     @State private var hasValidated: Bool = false
-    @State private var appeared = false
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             // Label
             Text(label)
                 .font(.system(size: 14, weight: .semibold, design: .rounded))
-                .foregroundColor(.white.opacity(0.8))
-                .padding(.horizontal, 24)
+                .foregroundColor(AppTheme.TextColors.secondary)
+                .padding(.horizontal, AppTheme.Layout.screenPadding)
             
             // Input Container
-            HStack(spacing: 16) {
+            HStack(spacing: 14) {
                 // Leading icon
                 if let icon = icon {
                     Image(systemName: icon)
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(isFocused ? AppTheme.AccentColors.primary : .white.opacity(0.5))
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundColor(isFocused ? AppTheme.AccentColors.primary : AppTheme.TextColors.tertiary)
                         .frame(width: 20)
                 }
                 
@@ -51,7 +50,7 @@ struct ModernTextField: View {
                     }
                 }
                 .font(.system(size: 16, weight: .medium, design: .rounded))
-                .foregroundColor(.white)
+                .foregroundColor(AppTheme.TextColors.primary)
                 .keyboardType(keyboardType)
                 .autocapitalization(.none)
                 .focused($isFocused)
@@ -63,8 +62,8 @@ struct ModernTextField: View {
                 if let trailingIcon = trailingIcon, let action = trailingAction {
                     Button(action: action) {
                         Image(systemName: trailingIcon)
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundColor(.white.opacity(0.6))
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundColor(AppTheme.TextColors.tertiary)
                     }
                 } else if !text.isEmpty && isFocused && !isSecure {
                     Button(action: {
@@ -73,57 +72,43 @@ struct ModernTextField: View {
                         hasValidated = false
                     }) {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundColor(.white.opacity(0.5))
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundColor(AppTheme.TextColors.tertiary)
                     }
                     .transition(.scale.combined(with: .opacity))
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 18)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 16)
             .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(.white.opacity(isFocused ? 0.12 : 0.08))
+                RoundedRectangle(cornerRadius: AppTheme.Layout.cornerRadiusMedium)
+                    .fill(AppTheme.SurfaceColors.base)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 16)
+                        RoundedRectangle(cornerRadius: AppTheme.Layout.cornerRadiusMedium)
                             .stroke(
                                 showError ? AppTheme.AccentColors.error.opacity(0.6) :
-                                isFocused ? AppTheme.AccentColors.primary.opacity(0.6) : .white.opacity(0.2),
-                                lineWidth: showError || isFocused ? 2 : 1
+                                isFocused ? AppTheme.AccentColors.primary.opacity(0.5) : Color.clear,
+                                lineWidth: isFocused || showError ? 1.5 : 0
                             )
                     )
             )
-            .scaleEffect(isFocused ? 1.02 : 1.0)
-            .shadow(
-                color: showError ? AppTheme.AccentColors.error.opacity(0.2) :
-                       isFocused ? AppTheme.AccentColors.primary.opacity(0.2) : .clear,
-                radius: isFocused ? 12 : 0,
-                y: isFocused ? 4 : 0
-            )
-            .padding(.horizontal, 24)
+            .padding(.horizontal, AppTheme.Layout.screenPadding)
             
             // Error Message
             if showError, let errorMessage = errorMessage {
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     Image(systemName: "exclamationmark.circle.fill")
                         .font(.system(size: 12, weight: .semibold))
                     Text(errorMessage)
                         .font(.system(size: 12, weight: .medium, design: .rounded))
                 }
                 .foregroundColor(AppTheme.AccentColors.error)
-                .padding(.horizontal, 24)
+                .padding(.horizontal, AppTheme.Layout.screenPadding)
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 20)
-        .onAppear {
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.1)) {
-                appeared = true
-            }
-        }
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isFocused)
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: showError)
+        .animation(AppTheme.AnimationCurves.spring, value: isFocused)
+        .animation(AppTheme.AnimationCurves.spring, value: showError)
         .onChange(of: isFocused) { focused in
             if !focused {
                 hasValidated = true

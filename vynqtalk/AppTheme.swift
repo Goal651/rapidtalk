@@ -3,75 +3,123 @@
 //  vynqtalk
 //
 //  Design System Foundation
-//  Provides centralized theming for colors, typography, spacing, and animations
+//  Premium polished theme with sophisticated colors and consistent spacing
 //
 
 import SwiftUI
 
 struct AppTheme {
     
-    // MARK: - Color Palette (Tech Professional Theme)
+    // MARK: - Color Palette (Premium Theme)
     
-    /// Primary gradient colors for backgrounds
-    struct GradientColors {
-        static let deepBlack = Color.black                                     // Pure Black
-        static let richBlack = Color.black                                     // Pure Black
-        static let darkGray = Color(red: 0.05, green: 0.05, blue: 0.05)       // Very dark gray
-        
-        // Legacy names for compatibility
-        static let deepPurple = deepBlack
-        static let richPurple = richBlack
-        static let deepBlue = darkGray
-        static let deepNavyBlack = deepBlack
-        static let midnightBlue = richBlack
-        static let softBlue = darkGray
+    /// Background colors - True dark mode
+    struct BackgroundColors {
+        static let primary = Color(red: 0.07, green: 0.07, blue: 0.07)        // #121212 - Main background
+        static let secondary = Color(red: 0.10, green: 0.10, blue: 0.10)      // #1A1A1A - Elevated surfaces
+        static let tertiary = Color(red: 0.13, green: 0.13, blue: 0.13)       // #212121 - Cards/modals
     }
     
-    /// Primary gradient configuration
-    static let primaryGradient = LinearGradient(
-        colors: [
-            Color.black,
-            Color.black,
-            GradientColors.darkGray
-        ],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
-    
-    /// Accent colors for interactive elements and states
+    /// Accent colors - Sophisticated blue palette
     struct AccentColors {
-        static let primary = Color(red: 0.20, green: 0.60, blue: 1.0)          // #3399FF (Electric Blue)
-        static let secondary = Color(red: 0.25, green: 0.70, blue: 1.0)        // #40B3FF (Bright Blue)
-        static let success = Color(red: 0.25, green: 0.85, blue: 0.65)         // #40D9A6 (Mint Green)
-        static let online = Color(red: 0.30, green: 0.90, blue: 0.70)          // #4DE6B3 (Bright Green)
-        static let warning = Color(red: 1.0, green: 0.70, blue: 0.30)          // #FFB34D (Warm Orange)
-        static let error = Color(red: 1.0, green: 0.40, blue: 0.50)            // #FF6680 (Coral Red)
+        static let primary = Color(red: 0.04, green: 0.52, blue: 1.0)         // #0A84FF - Apple blue
+        static let primaryDark = Color(red: 0.03, green: 0.42, blue: 0.85)    // #0869D9 - Darker variant
+        static let secondary = Color(red: 0.25, green: 0.70, blue: 1.0)       // #40B3FF - Lighter blue (legacy)
+        static let success = Color(red: 0.20, green: 0.78, blue: 0.35)        // #34C759 - iOS green
+        static let online = Color(red: 0.20, green: 0.78, blue: 0.35)         // #34C759 - Same as success
+        static let warning = Color(red: 1.0, green: 0.62, blue: 0.04)         // #FF9F0A - iOS orange
+        static let error = Color(red: 1.0, green: 0.27, blue: 0.23)           // #FF453A - iOS red
     }
     
     /// Text color hierarchy
     struct TextColors {
         static let primary = Color.white
-        static let secondary = Color.white.opacity(0.8)
-        static let tertiary = Color.white.opacity(0.6)
-        static let disabled = Color.white.opacity(0.4)
+        static let secondary = Color.white.opacity(0.85)
+        static let tertiary = Color.white.opacity(0.65)
+        static let quaternary = Color.white.opacity(0.45)
+        static let disabled = Color.white.opacity(0.40)                       // Disabled state
     }
     
-    /// Surface and background colors
+    /// Surface colors for cards and elevated elements
     struct SurfaceColors {
-        static let surface = Color.white.opacity(0.08)                          // Subtle glass
-        static let surfaceLight = Color.white.opacity(0.05)                     // Very subtle
-        static let surfaceMedium = Color.white.opacity(0.12)                    // More visible
-        static let surfaceElevated = Color.white.opacity(0.15)                  // Elevated cards
+        static let base = Color.white.opacity(0.10)                           // Base surface
+        static let elevated = Color.white.opacity(0.14)                       // Elevated cards
+        static let overlay = Color.white.opacity(0.18)                        // Modals/sheets
+        
+        // Legacy compatibility
+        static let surface = base
+        static let surfaceLight = Color.white.opacity(0.08)
+        static let surfaceMedium = base
+        static let surfaceElevated = elevated
     }
     
-    /// Message bubble colors
+    /// Message bubble colors - Minimal like iMessage
     struct MessageColors {
-        // Sent messages - Electric Blue gradient
-        static let sentStart = Color(red: 0.20, green: 0.60, blue: 1.0)        // #3399FF
-        static let sentEnd = Color(red: 0.15, green: 0.50, blue: 0.90)         // #2680E6
+        static let sent = Color(red: 0.04, green: 0.52, blue: 1.0)           // #0A84FF - Solid blue
+        static let received = Color(red: 0.17, green: 0.17, blue: 0.18)      // #2C2C2E - Dark gray
         
-        // Received messages - Pure black with slight gray tint
-        static let received = Color(red: 0.05, green: 0.05, blue: 0.05)        // Very dark gray
+        // Legacy compatibility
+        static let sentStart = sent
+        static let sentEnd = Color(red: 0.03, green: 0.42, blue: 0.85)       // Darker blue
+    }
+    
+    // Legacy compatibility (will be removed)
+    struct GradientColors {
+        static let deepBlack = BackgroundColors.primary
+        static let richBlack = BackgroundColors.secondary
+        static let darkGray = BackgroundColors.tertiary
+        static let deepPurple = BackgroundColors.primary
+        static let richPurple = BackgroundColors.secondary
+        static let deepBlue = BackgroundColors.tertiary
+        static let deepNavyBlack = BackgroundColors.primary
+        static let midnightBlue = BackgroundColors.secondary
+        static let softBlue = BackgroundColors.tertiary
+    }
+    
+    /// Primary gradient for backgrounds
+    static let primaryGradient = LinearGradient(
+        colors: [
+            BackgroundColors.primary,
+            BackgroundColors.secondary
+        ],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    
+    // MARK: - Layout Constants
+    
+    /// Fixed layout values for consistency
+    struct Layout {
+        // Padding
+        static let screenPadding: CGFloat = 20                                // Standard screen edges
+        static let screenPaddingIPad: CGFloat = 32                            // iPad screen edges
+        static let cardPadding: CGFloat = 16                                  // Inside cards
+        static let sectionSpacing: CGFloat = 32                               // Between major sections
+        
+        // Component sizes
+        static let buttonHeight: CGFloat = 52                                 // Standard button
+        static let buttonHeightSmall: CGFloat = 44                            // Small button
+        static let iconButton: CGFloat = 44                                   // Icon-only button (min touch target)
+        static let textFieldHeight: CGFloat = 52                              // Text input
+        
+        // Avatars
+        static let avatarSmall: CGFloat = 40
+        static let avatarMedium: CGFloat = 56
+        static let avatarLarge: CGFloat = 80
+        static let avatarXLarge: CGFloat = 120
+        
+        // Corner radius
+        static let cornerRadiusSmall: CGFloat = 12
+        static let cornerRadiusMedium: CGFloat = 16
+        static let cornerRadiusLarge: CGFloat = 20
+        static let cornerRadiusButton: CGFloat = 26                           // Pill-shaped buttons
+        
+        // iPad specific
+        static let sidebarWidth: CGFloat = 340
+        static let maxContentWidth: CGFloat = 680
+        
+        // Message bubbles
+        static let messageBubbleMaxWidth: CGFloat = 280
+        static let messageBubbleRadius: CGFloat = 18
     }
     
     // MARK: - Typography
@@ -122,7 +170,7 @@ struct AppTheme {
     
     // MARK: - Spacing
     
-    /// Spacing scale for consistent padding and margins
+    /// Spacing scale for consistent padding and margins (8pt grid)
     struct Spacing {
         static let xs: CGFloat = 4
         static let s: CGFloat = 8
@@ -132,9 +180,8 @@ struct AppTheme {
         static let xxl: CGFloat = 48
     }
     
-    // MARK: - Corner Radius
+    // MARK: - Corner Radius (Deprecated - use Layout.cornerRadius*)
     
-    /// Corner radius values for rounded elements
     struct CornerRadius {
         static let s: CGFloat = 8
         static let m: CGFloat = 12
@@ -148,30 +195,31 @@ struct AppTheme {
     struct AnimationDuration {
         static let fast: Double = 0.2
         static let normal: Double = 0.3
-        static let slow: Double = 0.5
+        static let slow: Double = 0.4
     }
     
-    /// Predefined animation curves
+    /// Simplified animation curves
     struct AnimationCurves {
-        static let spring = Animation.spring(response: 0.3, dampingFraction: 0.6)
+        static let spring = Animation.spring(response: 0.35, dampingFraction: 0.75)
+        static let springBouncy = Animation.spring(response: 0.4, dampingFraction: 0.65)
         static let easeInOut = Animation.easeInOut(duration: AnimationDuration.normal)
-        static let easeIn = Animation.easeIn(duration: AnimationDuration.normal)
         static let easeOut = Animation.easeOut(duration: AnimationDuration.normal)
-        static let linear = Animation.linear(duration: AnimationDuration.normal)
         
-        // Specific animation curves for common interactions
-        static let buttonPress = Animation.spring(response: 0.15, dampingFraction: 0.6)
+        // Specific interactions
+        static let buttonPress = Animation.spring(response: 0.2, dampingFraction: 0.7)
         static let screenTransition = Animation.easeInOut(duration: AnimationDuration.slow)
-        static let componentAppearance = Animation.easeOut(duration: AnimationDuration.normal)
+        
+        // Legacy compatibility
+        static let componentAppearance = easeOut
     }
     
     // MARK: - Shadows
     
     /// Shadow configurations for depth
     struct Shadows {
-        static let small = (color: Color.black.opacity(0.1), radius: CGFloat(4), x: CGFloat(0), y: CGFloat(2))
-        static let medium = (color: Color.black.opacity(0.15), radius: CGFloat(8), x: CGFloat(0), y: CGFloat(4))
-        static let large = (color: Color.black.opacity(0.2), radius: CGFloat(16), x: CGFloat(0), y: CGFloat(8))
+        static let small = (color: Color.black.opacity(0.15), radius: CGFloat(8), x: CGFloat(0), y: CGFloat(2))
+        static let medium = (color: Color.black.opacity(0.2), radius: CGFloat(12), x: CGFloat(0), y: CGFloat(4))
+        static let large = (color: Color.black.opacity(0.25), radius: CGFloat(20), x: CGFloat(0), y: CGFloat(8))
     }
 }
 

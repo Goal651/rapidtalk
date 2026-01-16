@@ -8,47 +8,59 @@ struct MainTabView: View {
     @State private var isAdmin: Bool = false
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            // Chats - responsive for iPad
-            ResponsiveHomeScreen()
-                .tabItem {
-                    VStack(spacing: 4) {
-                        Image(systemName: selectedTab == 0 ? "house.fill" : "house")
-                            .font(.system(size: 24, weight: selectedTab == 0 ? .semibold : .regular))
-                        Text("Chats")
-                            .font(AppTheme.Typography.caption2)
+        ZStack {
+            TabView(selection: $selectedTab) {
+                // Chats - responsive for iPad
+                ResponsiveHomeScreen()
+                    .tabItem {
+                        VStack(spacing: 4) {
+                            Image(systemName: selectedTab == 0 ? "house.fill" : "house")
+                                .font(.system(size: 24, weight: selectedTab == 0 ? .semibold : .regular))
+                            Text("Chats")
+                                .font(AppTheme.Typography.caption2)
+                        }
                     }
-                }
-                .tag(0)
-            
-            // Admin tab (only visible for admins)
-            if isAdmin {
-                NavigationStack {
-                    AdminDashboard()
-                }
-                .tabItem {
-                    VStack(spacing: 4) {
-                        Image(systemName: selectedTab == 1 ? "shield.fill" : "shield")
-                            .font(.system(size: 24, weight: selectedTab == 1 ? .semibold : .regular))
-                        Text("Admin")
-                            .font(AppTheme.Typography.caption2)
+                    .tag(0)
+                
+                // Admin tab (only visible for admins)
+                if isAdmin {
+                    NavigationStack {
+                        AdminDashboard()
                     }
+                    .tabItem {
+                        VStack(spacing: 4) {
+                            Image(systemName: selectedTab == 1 ? "shield.fill" : "shield")
+                                .font(.system(size: 24, weight: selectedTab == 1 ? .semibold : .regular))
+                            Text("Admin")
+                                .font(AppTheme.Typography.caption2)
+                        }
+                    }
+                    .tag(1)
                 }
-                .tag(1)
-            }
 
-            ProfileScreen()
-                .tabItem {
-                    VStack(spacing: 4) {
-                        Image(systemName: selectedTab == (isAdmin ? 2 : 1) ? "person.crop.circle.fill" : "person.crop.circle")
-                            .font(.system(size: 24, weight: selectedTab == (isAdmin ? 2 : 1) ? .semibold : .regular))
-                        Text("Profile")
-                            .font(AppTheme.Typography.caption2)
+                ProfileScreen()
+                    .tabItem {
+                        VStack(spacing: 4) {
+                            Image(systemName: selectedTab == (isAdmin ? 2 : 1) ? "person.crop.circle.fill" : "person.crop.circle")
+                                .font(.system(size: 24, weight: selectedTab == (isAdmin ? 2 : 1) ? .semibold : .regular))
+                            Text("Profile")
+                                .font(AppTheme.Typography.caption2)
+                        }
                     }
-                }
-                .tag(isAdmin ? 2 : 1)
+                    .tag(isAdmin ? 2 : 1)
+            }
+            .accentColor(AppTheme.AccentColors.primary)
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 20)
+            .disabled(wsM.userSuspended)  // Disable interaction if suspended
+            
+            // Suspension Alert Overlay
+            if wsM.userSuspended {
+                SuspensionAlert()
+                    .transition(.opacity)
+                    .zIndex(999)
+            }
         }
-        .accentColor(AppTheme.AccentColors.primary)
         .onAppear {
             // Customize tab bar appearance
             let appearance = UITabBarAppearance()
@@ -82,6 +94,10 @@ struct MainTabView: View {
             
             UITabBar.appearance().standardAppearance = appearance
             UITabBar.appearance().scrollEdgeAppearance = appearance
+            
+            withAnimation(.easeOut(duration: AppTheme.AnimationDuration.slow)) {
+                appeared = true
+            }
         }
         .task {
             if !wsM.isConnected {
@@ -91,19 +107,7 @@ struct MainTabView: View {
             // Check if user is admin
             await checkAdminStatus()
         }
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 20)
-        .onAppear {
-            withAnimation(.easeOut(duration: AppTheme.AnimationDuration.slow)) {
-                appeared = true
-            }
-        }
-        .transition(
-            .asymmetric(
-                insertion: .move(edge: .trailing).combined(with: .opacity),
-                removal: .move(edge: .leading).combined(with: .opacity)
-            )
-        )
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: wsM.userSuspended)
     }
     
     // MARK: - Check Admin Status

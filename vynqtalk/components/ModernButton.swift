@@ -2,7 +2,7 @@
 //  ModernButton.swift
 //  vynqtalk
 //
-//  Modern button component matching onboarding design
+//  Premium button component with simplified animations
 //
 
 import SwiftUI
@@ -16,24 +16,22 @@ struct ModernButton: View {
     let action: () -> Void
     
     @State private var isPressed = false
-    @State private var appeared = false
     
     enum ButtonStyle {
-        case primary    // White background like onboarding
+        case primary    // Blue background
         case secondary  // Outlined style
-        case accent     // Gradient accent
+        case tertiary   // Subtle background
     }
     
     var body: some View {
         Button(action: {
             if !isDisabled && !isLoading {
-                // Haptic feedback
-                let generator = UIImpactFeedbackGenerator(style: .medium)
+                let generator = UIImpactFeedbackGenerator(style: .light)
                 generator.impactOccurred()
                 action()
             }
         }) {
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 if isLoading {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: textColor))
@@ -41,7 +39,7 @@ struct ModernButton: View {
                 } else {
                     if let icon = icon {
                         Image(systemName: icon)
-                            .font(.system(size: 18, weight: .semibold, design: .rounded))
+                            .font(.system(size: 16, weight: .semibold))
                     }
                     
                     Text(title)
@@ -50,11 +48,11 @@ struct ModernButton: View {
             }
             .foregroundColor(textColor)
             .frame(maxWidth: .infinity)
-            .frame(height: 56)
+            .frame(height: AppTheme.Layout.buttonHeight)
             .background(backgroundView)
-            .cornerRadius(28)
+            .cornerRadius(AppTheme.Layout.cornerRadiusButton)
             .overlay(
-                RoundedRectangle(cornerRadius: 28)
+                RoundedRectangle(cornerRadius: AppTheme.Layout.cornerRadiusButton)
                     .stroke(borderColor, lineWidth: borderWidth)
             )
             .shadow(
@@ -66,26 +64,16 @@ struct ModernButton: View {
         .scaleEffect(scale)
         .opacity(opacity)
         .disabled(isDisabled || isLoading)
-        .opacity(appeared ? 1 : 0)
-        .scaleEffect(appeared ? 1 : 0.9)
-        .onAppear {
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.2)) {
-                appeared = true
-            }
-        }
+        .animation(AppTheme.AnimationCurves.buttonPress, value: isPressed)
         .simultaneousGesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { _ in
                     if !isPressed && !isDisabled && !isLoading {
-                        withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
-                            isPressed = true
-                        }
+                        isPressed = true
                     }
                 }
                 .onEnded { _ in
-                    withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
-                        isPressed = false
-                    }
+                    isPressed = false
                 }
         )
     }
@@ -96,30 +84,25 @@ struct ModernButton: View {
     private var backgroundView: some View {
         switch style {
         case .primary:
-            Color.white
+            AppTheme.AccentColors.primary
         case .secondary:
             Color.clear
-        case .accent:
-            LinearGradient(
-                colors: [
-                    AppTheme.AccentColors.primary,
-                    AppTheme.AccentColors.secondary
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+        case .tertiary:
+            AppTheme.SurfaceColors.base
         }
     }
     
     private var textColor: Color {
         if isDisabled {
-            return .white.opacity(0.4)
+            return AppTheme.TextColors.disabled
         }
         
         switch style {
         case .primary:
-            return AppTheme.GradientColors.deepBlack
-        case .secondary, .accent:
+            return .white
+        case .secondary:
+            return AppTheme.AccentColors.primary
+        case .tertiary:
             return .white
         }
     }
@@ -127,7 +110,7 @@ struct ModernButton: View {
     private var borderColor: Color {
         switch style {
         case .secondary:
-            return .white.opacity(0.3)
+            return AppTheme.AccentColors.primary.opacity(0.5)
         default:
             return .clear
         }
@@ -136,7 +119,7 @@ struct ModernButton: View {
     private var borderWidth: CGFloat {
         switch style {
         case .secondary:
-            return 2
+            return 1.5
         default:
             return 0
         }
@@ -147,9 +130,7 @@ struct ModernButton: View {
         
         switch style {
         case .primary:
-            return .white.opacity(0.3)
-        case .accent:
-            return AppTheme.AccentColors.primary.opacity(0.4)
+            return AppTheme.AccentColors.primary.opacity(0.3)
         default:
             return .clear
         }
@@ -160,9 +141,7 @@ struct ModernButton: View {
         
         switch style {
         case .primary:
-            return 15
-        case .accent:
-            return 20
+            return isPressed ? 8 : 12
         default:
             return 0
         }
@@ -170,17 +149,17 @@ struct ModernButton: View {
     
     private var shadowY: CGFloat {
         if isDisabled { return 0 }
-        return isPressed ? 2 : 8
+        return isPressed ? 2 : 4
     }
     
     private var scale: CGFloat {
         if isDisabled {
             return 1.0
         }
-        return isPressed ? 0.96 : 1.0
+        return isPressed ? 0.97 : 1.0
     }
     
     private var opacity: Double {
-        return isDisabled ? 0.6 : 1.0
+        return isDisabled ? 0.5 : 1.0
     }
 }
