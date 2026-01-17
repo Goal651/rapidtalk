@@ -101,6 +101,10 @@ struct WebSocketResponse: Decodable {
         if message == "user_suspended",
            let userId = data.userId,
            let suspended = data.suspended {
+            // Handle suspension immediately
+            if suspended {
+                SuspensionHandler.shared.handleSuspension()
+            }
             return .userSuspended(userId: userId, suspended: suspended)
         }
         

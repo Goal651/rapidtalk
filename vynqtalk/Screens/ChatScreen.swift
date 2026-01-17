@@ -21,7 +21,6 @@ struct ChatScreen: View {
     @State private var showUserDetails = false
     @State private var typingTimer: Timer?
     @State private var showMediaPicker = false
-    @State private var selectedMedia: MediaItem?
     @State private var isUploadingMedia = false
     @State private var scrollProxy: ScrollViewProxy?
     @State private var replyingTo: Message?
@@ -107,9 +106,6 @@ struct ChatScreen: View {
             .sheet(isPresented: $showMediaPicker) {
                 mediaPickerSheet
             }
-            .onChange(of: selectedMedia) { _, newMedia in
-                handleMediaSelection(newMedia)
-            }
             .onChange(of: wsM.reactionUpdate?.id) { _, _ in
                 handleReactionUpdate()
             }
@@ -161,10 +157,16 @@ struct ChatScreen: View {
         }
     }
     
-    private func handleMediaSelection(_ newMedia: MediaItem?) {
-        if let media = newMedia {
-            uploadAndSendMedia(media)
-        }
+    private func sendMediaMessage(_ mediaItem: MediaItem) {
+        // Send media message using WebSocket
+        wsM.sendChatMessage(
+            receiverId: userId,
+            content: mediaItem.fileName,
+            type: mediaItem.type
+        )
+        
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred()
     }
     
     private func handleReactionUpdate() {
@@ -240,7 +242,10 @@ struct ChatScreen: View {
     }
     
     private var mediaPickerSheet: some View {
-        MediaPicker(selectedMedia: $selectedMedia)
+        UltraMediaPicker(isPresented: $showMediaPicker) { mediaItem in
+            // Handle media selection
+            sendMediaMessage(mediaItem)
+        }
     }
     
     // MARK: - Header
@@ -386,7 +391,7 @@ struct ChatScreen: View {
                             .padding(.top, 32)
                     }
                     ForEach(messageVM.messages) { message in
-                        MessageBubble(
+                        RefinedMessageBubble(
                             message: message,
                             onReply: { msg in
                                 replyingTo = msg
@@ -614,66 +619,7 @@ struct ChatScreen: View {
         }
     }
     
-    // MARK: - Media Upload
-    
-    private func uploadAndSendMedia(_ media: MediaItem) {
-        isUploadingMedia = true
-        
-        Task {
-            do {
-                // Compress if image
-                var uploadData = media.data
-                var filename = media.filename
-                
-                if media.type == .image, let image = media.thumbnail {
-                    // Resize and compress image
-                    let resizedImage = resizeImage(image: image, maxSize: 1200)
-                    if let compressedData = resizedImage.jpegData(compressionQuality: 0.7) {
-                        uploadData = compressedData
-                        filename = "image_\(UUID().uuidString).jpg"
-                    }
-                }
-                
-                #if DEBUG
-                print("📤 Uploading \(media.type): \(uploadData.count) bytes")
-                #endif
-                
-                // Step 1: Upload file to REST endpoint
-                let response: APIResponse<String> = try await APIClient.shared.uploadMessageAttachment(
-                    fileData: uploadData,
-                    filename: filename,
-                    mimeType: media.mimeType
-                )
-                
-                guard response.success, let fileURL = response.data else {
-                    throw NSError(domain: "Upload", code: -1, userInfo: [NSLocalizedDescriptionKey: response.message])
-                }
-                
-                #if DEBUG
-                print("✅ File uploaded: \(fileURL)")
-                #endif
-                
-                // Step 2: Send message via WebSocket with file URL
-                wsM.sendChatMessage(
-                    receiverId: userId,
-                    content: fileURL,
-                    type: media.messageType,
-                    replyToId: replyingTo?.id
-                )
-                
-                isUploadingMedia = false
-                selectedMedia = nil
-                replyingTo = nil
-                
-            } catch {
-                #if DEBUG
-                print("❌ Media upload error: \(error)")
-                #endif
-                isUploadingMedia = false
-                selectedMedia = nil
-            }
-        }
-    }
+    // MARK: - Helper Methods
     
     private func uploadAndSendVoiceNote(data: Data, duration: TimeInterval) {
         isUploadingMedia = true

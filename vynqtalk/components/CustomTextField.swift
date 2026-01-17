@@ -83,7 +83,7 @@ struct CustomTextField: View {
             .padding(AppTheme.Spacing.m)
             .background(
                 RoundedRectangle(cornerRadius: AppTheme.CornerRadius.m)
-                    .fill(AppTheme.SurfaceColors.surface)
+                    .fill(AppTheme.SurfaceColors.base)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: AppTheme.CornerRadius.m)
@@ -170,7 +170,7 @@ struct CustomTextField: View {
 struct CustomTextField_Previews: PreviewProvider {
     static var previews: some View {
         ZStack {
-            AppTheme.primaryGradient
+            AppTheme.BackgroundColors.primaryGradient
                 .ignoresSafeArea()
             
             VStack(spacing: AppTheme.Spacing.l) {

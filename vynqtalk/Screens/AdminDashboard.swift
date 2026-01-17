@@ -25,10 +25,20 @@ struct AdminDashboard: View {
                     // Key metrics in compact grid
                     if let stats = adminVM.dashboardStats {
                         metricsGrid(stats: stats)
-                        
-                        // Activity chart
+                    }
+                    
+                    // Analytics charts
+                    if let analytics = adminVM.analytics {
+                        analyticsSection(analytics: analytics)
+                    }
+                    
+                    // Activity section
+                    if let stats = adminVM.dashboardStats {
                         activitySection(stats: stats)
-                    } else if adminVM.isLoading {
+                    }
+                    
+                    // Loading state
+                    if adminVM.isLoading && adminVM.dashboardStats == nil {
                         ProgressView()
                             .tint(AppTheme.AccentColors.primary)
                             .padding(.top, 40)
@@ -45,6 +55,7 @@ struct AdminDashboard: View {
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await adminVM.loadDashboardStats()
+            await adminVM.loadAnalytics()
             adminWS.connect()
         }
         .onAppear {
@@ -66,6 +77,7 @@ struct AdminDashboard: View {
         }
         .refreshable {
             await adminVM.loadDashboardStats()
+            await adminVM.loadAnalytics()
         }
     }
     
@@ -143,6 +155,30 @@ struct AdminDashboard: View {
                 value: formatNumber(stats.messagesLast24h),
                 color: Color.orange
             )
+        }
+    }
+    
+    // MARK: - Analytics Section
+    
+    private func analyticsSection(analytics: AdminAnalytics) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Analytics")
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundColor(AppTheme.TextColors.primary)
+            
+            // Charts grid
+            VStack(spacing: 16) {
+                // User growth chart (full width)
+                UserGrowthChart(data: analytics.userGrowth)
+                
+                HStack(spacing: 16) {
+                    // Message activity chart
+                    MessageActivityChart(data: analytics.messageActivity)
+                    
+                    // Message type distribution
+                    MessageTypeChart(data: analytics.messageTypeDistribution)
+                }
+            }
         }
     }
     

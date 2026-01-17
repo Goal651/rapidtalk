@@ -10,6 +10,7 @@ import SwiftUI
 
 class AdminViewModel: ObservableObject {
     @Published var dashboardStats: AdminDashboardStats?
+    @Published var analytics: AdminAnalytics?
     @Published var users: [AdminUser] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
@@ -261,6 +262,32 @@ class AdminViewModel: ObservableObject {
                 messageCount: users[index].messageCount,
                 suspendedAt: update.suspended ? Date() : nil
             )
+        }
+    }
+    
+    // MARK: - Load Analytics
+    
+    @MainActor
+    func loadAnalytics() async {
+        do {
+            let response: APIResponse<AdminAnalytics> = try await api.get("/admin/analytics")
+            
+            guard response.success, let analyticsData = response.data else {
+                errorMessage = response.message
+                return
+            }
+            
+            analytics = analyticsData
+            
+            #if DEBUG
+            print("✅ Loaded analytics: \(analyticsData.userGrowth.count) growth points, \(analyticsData.messageTypeDistribution.count) message types")
+            #endif
+            
+        } catch {
+            errorMessage = "Failed to load analytics"
+            #if DEBUG
+            print("❌ Analytics error: \(error)")
+            #endif
         }
     }
 }

@@ -15,9 +15,9 @@ struct ContentView: View {
         NavigationStack(path: $nav.path) {
             Group {
                 if loggedIn {
-                    MainTabView()
+                    UltraMainTabView()
                 } else {
-                    WelcomeScreen()
+                    UltraWelcomeScreen()
                 }
             }
             .navigationDestination(for: AppRoute.self) { route in
@@ -44,7 +44,7 @@ struct ContentView: View {
                 )
             }
         }
-        .animation(.easeInOut(duration: AppTheme.AnimationDuration.slow), value: nav.path)
+        .animation(UltraTheme.Motion.gentle, value: nav.path)
     }
     
     @ViewBuilder
@@ -52,15 +52,15 @@ struct ContentView: View {
         Group {
             switch route {
             case .welcome:
-                WelcomeScreen()
+                UltraWelcomeScreen()
             case .login:
-                LoginScreen()
+                UltraLoginScreen()
             case .register:
-                RegisterScreen()
+                UltraRegisterScreen()
             case .main:
-                MainTabView()
+                UltraMainTabView()
             case .chat(let userId, let name, let avatar, let lastActive):
-                ChatScreen(
+                UltraChatScreen(
                     userId: userId, 
                     userName: name, 
                     userAvatar: avatar,

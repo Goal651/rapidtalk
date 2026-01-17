@@ -8,8 +8,8 @@
 import Foundation
 import SwiftUI
 
-class AuthViewModel:ObservableObject{
-    let api=APIClient.shared
+class AuthViewModel: ObservableObject {
+    let api = APIClient.shared
     private let nav: NavigationCoordinator
     
     @AppStorage("loggedIn") var loggedIn: Bool = false
@@ -45,6 +45,10 @@ class AuthViewModel:ObservableObject{
 
             guard response.success,
                   let loginData = response.data else {
+                // Check if it's a suspension response
+                if response.message.lowercased().contains("suspended") {
+                    SuspensionHandler.shared.handleSuspension(message: response.message)
+                }
                 return false
             }
 
@@ -70,8 +74,24 @@ class AuthViewModel:ObservableObject{
             return true
 
         } catch {
-            print("Login error:", error)
-            return false
+            // Handle different types of API errors
+            if let apiError = error as? APIError {
+                switch apiError {
+                case .invalidCredentials(let message):
+                    // Invalid credentials - don't trigger suspension alert
+                    print("Invalid credentials: \(message)")
+                    return false
+                case .authenticationRequired:
+                    // This is for suspension cases - suspension handler already called
+                    return false
+                default:
+                    print("Login error:", error)
+                    return false
+                }
+            } else {
+                print("Login error:", error)
+                return false
+            }
         }
     }
 
@@ -108,7 +128,16 @@ class AuthViewModel:ObservableObject{
             nav.reset(to: .main)
             return true
         } catch {
-            print("Register error:", error)
+            if let apiError = error as? APIError {
+                switch apiError {
+                case .invalidCredentials(let message):
+                    print("Registration error: \(message)")
+                default:
+                    print("Register error:", error)
+                }
+            } else {
+                print("Register error:", error)
+            }
             return false
         }
     }

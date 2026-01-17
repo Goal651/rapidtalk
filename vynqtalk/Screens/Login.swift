@@ -18,6 +18,8 @@ struct LoginScreen: View {
     @State private var isLoading: Bool = false
     @State private var appeared = false
     @State private var showPassword = false
+    @State private var loginError: String? = nil
+    @StateObject private var suspensionHandler = SuspensionHandler.shared
     
     func isValidEmail(_ email: String) -> Bool {
         let regex = #"^\S+@\S+\.\S+$"#
@@ -79,6 +81,23 @@ struct LoginScreen: View {
                             trailingAction: { showPassword.toggle() }
                         )
                         
+                        // Login Error Message
+                        if let error = loginError {
+                            HStack(spacing: 8) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(AppTheme.AccentColors.error)
+                                
+                                Text(error)
+                                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                                    .foregroundColor(AppTheme.AccentColors.error)
+                                
+                                Spacer()
+                            }
+                            .padding(.horizontal, 24)
+                            .padding(.top, 8)
+                        }
+                        
                         // Forgot Password
                         HStack {
                             Spacer()
@@ -102,15 +121,19 @@ struct LoginScreen: View {
                     ) {
                         Task {
                             isLoading = true
-                            let ok = await authVM.login(email: email, password: password)
+                            loginError = nil
+                            
+                            let success = await authVM.login(email: email, password: password)
                             isLoading = false
                             
-                            if ok {
+                            if success {
                                 wsM.connect()
                             } else {
-                                modalTitle = "Login Failed"
-                                modalDescription = "Please check your email/password and try again."
-                                withAnimation { showModal = true }
+                                // Check if it's a suspension (handled by SuspensionHandler)
+                                if !suspensionHandler.isSuspended {
+                                    // It's an invalid credentials error
+                                    loginError = "Invalid email or password. Please try again."
+                                }
                             }
                         }
                     }
@@ -136,6 +159,11 @@ struct LoginScreen: View {
                 .transition(.scale.combined(with: .opacity))
                 .zIndex(1)
             }
+            
+            // Suspension alert overlay
+            SuspensionAlertView()
+                .environmentObject(authVM)
+                .zIndex(2)
         }
         .navigationBarBackButtonHidden()
         .toolbar {
@@ -147,6 +175,12 @@ struct LoginScreen: View {
             withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.1)) {
                 appeared = true
             }
+        }
+        .onChange(of: email) { _, _ in
+            loginError = nil
+        }
+        .onChange(of: password) { _, _ in
+            loginError = nil
         }
         .transition(
             .asymmetric(

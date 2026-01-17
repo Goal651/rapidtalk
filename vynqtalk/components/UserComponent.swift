@@ -52,7 +52,7 @@ struct UserComponent: View {
         }
         .padding(.vertical, AppTheme.Spacing.m)
         .padding(.horizontal, AppTheme.Spacing.m)
-        .background(AppTheme.SurfaceColors.surfaceLight)
+        .background(AppTheme.SurfaceColors.base)
         .cornerRadius(AppTheme.CornerRadius.l)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityDescription)

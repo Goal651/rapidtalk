@@ -156,8 +156,36 @@ final class APIClient: ObservableObject {
             }
         
             if httpResponse.statusCode == 401 || httpResponse.statusCode == 403 {
-                logout()
-                throw APIError.authenticationRequired
+                // Special handling for login endpoints
+                if endpoint == "/auth/login" || endpoint == "/auth/signup" {
+                    // Parse the error message for login attempts
+                    if let responseDict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let reason = responseDict["reason"] as? String {
+                        if reason.lowercased().contains("suspended") {
+                            SuspensionHandler.shared.handleSuspension(message: reason)
+                            throw APIError.authenticationRequired
+                        } else {
+                            // Invalid credentials, don't logout
+                            throw APIError.invalidCredentials(reason)
+                        }
+                    } else {
+                        throw APIError.invalidCredentials("Invalid email or password")
+                    }
+                } else {
+                    // For other endpoints, handle as session expiry/suspension
+                    if let responseDict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let reason = responseDict["reason"] as? String {
+                        if reason.lowercased().contains("suspended") {
+                            SuspensionHandler.shared.handleSuspension(message: reason)
+                        } else {
+                            SuspensionHandler.shared.handleHTTPResponse(httpResponse)
+                        }
+                    } else {
+                        SuspensionHandler.shared.handleHTTPResponse(httpResponse)
+                    }
+                    logout()
+                    throw APIError.authenticationRequired
+                }
             }
             
             if httpResponse.statusCode >= 500 {

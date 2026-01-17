@@ -108,6 +108,10 @@ struct MainTabView: View {
             await checkAdminStatus()
         }
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: wsM.userSuspended)
+        .overlay(
+            // Suspension alert overlay
+            SuspensionAlertView()
+        )
     }
     
     // MARK: - Check Admin Status

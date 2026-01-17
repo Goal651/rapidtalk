@@ -67,7 +67,7 @@ struct RegisterSuccessModal: View {
             .padding(AppTheme.Spacing.xl)
             .background(
                 RoundedRectangle(cornerRadius: AppTheme.CornerRadius.xl)
-                    .fill(AppTheme.SurfaceColors.surface)
+                    .fill(AppTheme.SurfaceColors.elevated)
                     .background(
                         .ultraThinMaterial,
                         in: RoundedRectangle(cornerRadius: AppTheme.CornerRadius.xl)
@@ -121,7 +121,7 @@ struct RegisterSuccessModal: View {
 struct RegisterSuccessModal_Previews: PreviewProvider {
     static var previews: some View {
         ZStack {
-            AppTheme.primaryGradient
+            AppTheme.BackgroundColors.primaryGradient
                 .ignoresSafeArea()
             
             RegisterSuccessModal(

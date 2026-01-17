@@ -193,7 +193,7 @@ struct CustomButton: View {
 struct CustomButton_Previews: PreviewProvider {
     static var previews: some View {
         ZStack {
-            AppTheme.primaryGradient
+            AppTheme.BackgroundColors.primaryGradient
                 .ignoresSafeArea()
             
             VStack(spacing: AppTheme.Spacing.l) {

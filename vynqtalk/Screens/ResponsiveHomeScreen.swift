@@ -94,7 +94,7 @@ struct ResponsiveHomeScreen: View {
     
     private var searchSection: some View {
         VStack(spacing: 20) {
-            ModernSearchBar(text: .constant(""))
+            RefinedSearchBar(text: .constant(""))
                 .padding(.horizontal, 24)
         }
         .padding(.bottom, 24)
@@ -104,13 +104,13 @@ struct ResponsiveHomeScreen: View {
         ScrollView {
             LazyVStack(spacing: 12) {
                 if userVM.isLoading {
-                    ModernLoadingView()
+                    RefinedLoadingView()
                         .padding(.top, 40)
                 } else if let err = userVM.errorMessage {
-                    ModernErrorView(message: err)
+                    RefinedErrorView(message: err)
                         .padding(.top, 40)
                 } else if userVM.users.isEmpty {
-                    ModernEmptyStateView()
+                    RefinedEmptyStateView()
                         .padding(.top, 40)
                 } else {
                     ForEach(userVM.users) { user in
@@ -201,7 +201,7 @@ struct SplitViewUserRow: View {
                         // Show typing indicator if user is typing
                         if isTyping {
                             HStack(spacing: 4) {
-                                TypingDotsSmall()
+                                RefinedTypingDotsSmall()
                                 Text("typing")
                                     .font(.system(size: 14, weight: .medium, design: .rounded))
                                     .foregroundColor(AppTheme.AccentColors.primary)

@@ -181,16 +181,16 @@ struct AdminUserDetails: View {
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity, alignment: .leading)
             
-            InfoRow(icon: "envelope.fill", title: "Email", value: user.email ?? "N/A")
-            InfoRow(icon: "person.fill", title: "User ID", value: user.id)
-            InfoRow(icon: "shield.fill", title: "Role", value: user.userRole?.rawValue.capitalized ?? "User")
+            InfoRow(title: "Email", value: user.email ?? "N/A")
+            InfoRow(title: "User ID", value: user.id)
+            InfoRow(title: "Role", value: user.userRole?.rawValue.capitalized ?? "User")
             
             if let lastActive = user.lastActive {
-                InfoRow(icon: "clock.fill", title: "Last Active", value: formatFullDate(lastActive))
+                InfoRow(title: "Last Active", value: formatFullDate(lastActive))
             }
             
             if let suspendedAt = user.suspendedAt {
-                InfoRow(icon: "exclamationmark.triangle.fill", title: "Suspended At", value: formatFullDate(suspendedAt))
+                InfoRow(title: "Suspended At", value: formatFullDate(suspendedAt))
             }
         }
     }
@@ -323,41 +323,4 @@ struct StatBox: View {
     }
 }
 
-// MARK: - Info Row
 
-struct InfoRow: View {
-    let icon: String
-    let title: String
-    let value: String
-    
-    var body: some View {
-        HStack(spacing: 16) {
-            Image(systemName: icon)
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(AppTheme.AccentColors.primary)
-                .frame(width: 40, height: 40)
-                .background(
-                    Circle()
-                        .fill(AppTheme.AccentColors.primary.opacity(0.2))
-                )
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                    .foregroundColor(.white.opacity(0.6))
-                
-                Text(value)
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundColor(.white)
-                    .lineLimit(1)
-            }
-            
-            Spacer()
-        }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(.white.opacity(0.06))
-        )
-    }
-}

@@ -11,6 +11,7 @@ enum APIError: LocalizedError {
     case networkError
     case serverError(statusCode: Int)
     case authenticationRequired
+    case invalidCredentials(String)
     case invalidResponse
     case decodingError(Error)
     case timeout
@@ -25,6 +26,8 @@ enum APIError: LocalizedError {
             return "Server error (\(code)). Please try again later."
         case .authenticationRequired:
             return "Your session has expired. Please log in again."
+        case .invalidCredentials(let message):
+            return message
         case .invalidResponse:
             return "Invalid response from server."
         case .decodingError:

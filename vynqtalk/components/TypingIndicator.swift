@@ -30,7 +30,7 @@ struct TypingIndicator: View {
             }
             .padding(.horizontal, AppTheme.Spacing.m)
             .padding(.vertical, AppTheme.Spacing.m)
-            .background(AppTheme.SurfaceColors.surfaceMedium)
+            .background(AppTheme.SurfaceColors.elevated)
             .cornerRadius(AppTheme.CornerRadius.l)
             .frame(maxWidth: 260, alignment: .leading)
             
@@ -58,7 +58,7 @@ struct TypingIndicator: View {
 // Preview
 #Preview {
     ZStack {
-        AppTheme.primaryGradient
+        AppTheme.BackgroundColors.primaryGradient
             .ignoresSafeArea()
         
         VStack {
