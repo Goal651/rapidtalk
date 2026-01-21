@@ -16,7 +16,7 @@ enum APIEnvironment {
     var baseURL: String {
         switch self {
         case .development:
-            return "http://10.12.75.116:8080"
+            return "http://10.12.74.190:8080"
         case .staging:
             return "https://staging-api.vynqtalk.com"
         case .production:
@@ -29,7 +29,7 @@ enum APIEnvironment {
     var wsURL: String {
         switch self {
         case .development:
-            return "ws://10.12.75.116:8080"
+            return "ws://10.12.74.190:8080"
         case .staging:
             return "wss://staging-api.vynqtalk.com"
         case .production:

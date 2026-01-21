@@ -170,22 +170,13 @@ struct ChatScreen: View {
     private func handleReactionUpdate() {
         guard let reaction = wsM.reactionUpdate else { return }
         
-        #if DEBUG
-        print("🔄 Processing reaction update for message: \(reaction.messageId)")
-        print("   Emoji: \(reaction.emoji)")
-        print("   User: \(reaction.user?.name ?? "Unknown")")
-        print("   Current messages count: \(messageVM.messages.count)")
-        #endif
         
         // Find the message and update its reactions
         if let index = messageVM.messages.firstIndex(where: { $0.id == reaction.messageId }) {
             let message = messageVM.messages[index]
             var updatedReactions = message.reactions ?? []
             
-            #if DEBUG
-            print("   Found message at index \(index)")
-            print("   Current reactions: \(updatedReactions.count)")
-            #endif
+       
             
             // Add the new reaction with full user object
             let newReaction = Reaction(
@@ -196,10 +187,6 @@ struct ChatScreen: View {
                 createdAt: reaction.createdAt
             )
             updatedReactions.append(newReaction)
-            
-            #if DEBUG
-            print("   Updated reactions: \(updatedReactions.count)")
-            #endif
             
             // Update the message with new reactions
             let updatedMessage = Message(
@@ -634,10 +621,7 @@ struct ChatScreen: View {
                     }
                 }
                 
-                #if DEBUG
-                print("📤 Uploading \(media.type): \(uploadData.count) bytes")
-                #endif
-                
+     
                 // Step 1: Upload file to REST endpoint
                 let response: APIResponse<String> = try await APIClient.shared.uploadMessageAttachment(
                     fileData: uploadData,
@@ -649,9 +633,7 @@ struct ChatScreen: View {
                     throw NSError(domain: "Upload", code: -1, userInfo: [NSLocalizedDescriptionKey: response.message])
                 }
                 
-                #if DEBUG
-                print("✅ File uploaded: \(fileURL)")
-                #endif
+        
                 
                 // Step 2: Send message via WebSocket with file URL
                 wsM.sendChatMessage(
@@ -666,9 +648,7 @@ struct ChatScreen: View {
                 replyingTo = nil
                 
             } catch {
-                #if DEBUG
-                print("❌ Media upload error: \(error)")
-                #endif
+  
                 isUploadingMedia = false
                 selectedMedia = nil
             }
@@ -682,9 +662,7 @@ struct ChatScreen: View {
             do {
                 let filename = "voice_note_\(UUID().uuidString).m4a"
                 
-                #if DEBUG
-                print("🎤 Uploading voice note: \(data.count) bytes, duration: \(duration)s")
-                #endif
+           
                 
                 // Upload voice note to REST endpoint
                 let response: APIResponse<String> = try await APIClient.shared.uploadMessageAttachment(

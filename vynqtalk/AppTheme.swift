@@ -41,7 +41,7 @@ struct AppTheme {
     
     /// Surface colors for cards and elevated elements
     struct SurfaceColors {
-        static let base = Color.white.opacity(0.10)                           // Base surface
+        static let base = Color.gray.opacity(0.10)                           // Base surface
         static let elevated = Color.white.opacity(0.14)                       // Elevated cards
         static let overlay = Color.white.opacity(0.18)                        // Modals/sheets
         

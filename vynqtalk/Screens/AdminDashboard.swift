@@ -249,17 +249,17 @@ struct CompactMetricCard: View {
     let color: Color
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(spacing: 8) { // spacing between icon and text
             Image(systemName: icon)
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundColor(color)
-                .frame(width: 40, height: 40)
+                .frame(width: 50, height: 50)
                 .background(
                     Circle()
                         .fill(color.opacity(0.15))
                 )
             
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(spacing: 2) { // inner texts stacked
                 Text(value)
                     .font(.system(size: 24, weight: .bold, design: .rounded))
                     .foregroundColor(AppTheme.TextColors.primary)
@@ -269,12 +269,14 @@ struct CompactMetricCard: View {
                     .foregroundColor(AppTheme.TextColors.secondary)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity) // take all space
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(AppTheme.SurfaceColors.base)
         )
+        .multilineTextAlignment(.center) // center text
+        .contentShape(Rectangle()) // optional, for tappable area
     }
 }
 

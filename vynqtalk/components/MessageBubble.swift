@@ -1,3 +1,4 @@
+import AVKit
 //
 //  MessageBubble.swift
 //  vynqtalk
@@ -5,7 +6,6 @@
 //  Created by wigothehacker on 12/15/25.
 //
 import SwiftUI
-import AVKit
 
 struct MessageBubble: View {
     @EnvironmentObject var authVM: AuthViewModel
@@ -28,39 +28,39 @@ struct MessageBubble: View {
         formatter.dateFormat = "HH:mm"
         return formatter.string(from: timestamp)
     }
-    
+
     var messageType: MessageType {
         message.type ?? .text
     }
-    
+
     var fileURL: URL? {
         guard let content = message.content else { return nil }
-        
+
         // Check if it's already a full URL
         if content.lowercased().hasPrefix("http") {
             return URL(string: content)
         }
-        
+
         // Construct full URL from relative path
         let baseURL = APIClient.environment.baseURL
         let cleanPath = content.hasPrefix("/") ? content : "/\(content)"
         return URL(string: "\(baseURL)\(cleanPath)")
     }
-    
+
     // Check if reply message has valid content
     private var hasValidReply: Bool {
         guard let replyTo = message.replyTo else { return false }
         // Check if it has actual content or is just a placeholder
         return replyTo.content != nil && !replyTo.content!.isEmpty
     }
-    
+
     // MARK: - Swipe Gesture
-    
+
     private var swipeGesture: some Gesture {
         DragGesture()
             .onChanged { value in
                 let translation = value.translation.width
-                
+
                 // Swipe left for sent messages (isMe), swipe right for received messages
                 if isMe {
                     // Only allow left swipe (negative translation)
@@ -83,14 +83,16 @@ struct MessageBubble: View {
             .onEnded { value in
                 let translation = value.translation.width
                 let threshold: CGFloat = 60
-                
+
                 // Trigger reply if swiped far enough
-                if (isMe && translation < -threshold) || (!isMe && translation > threshold) {
+                if (isMe && translation < -threshold)
+                    || (!isMe && translation > threshold)
+                {
                     let generator = UIImpactFeedbackGenerator(style: .medium)
                     generator.impactOccurred()
                     onReply(message)
                 }
-                
+
                 // Reset swipe offset with animation
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                     swipeOffset = 0
@@ -98,15 +100,15 @@ struct MessageBubble: View {
                 }
             }
     }
-    
+
     // MARK: - Quick Reaction Button
-    
+
     private var quickReactionButton: some View {
         Button(action: {
             let generator = UIImpactFeedbackGenerator(style: .light)
             generator.impactOccurred()
             showReactionPicker = true
-            
+
             // Reset swipe
             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                 swipeOffset = 0
@@ -123,7 +125,7 @@ struct MessageBubble: View {
                             LinearGradient(
                                 colors: [
                                     Color(red: 1.0, green: 0.3, blue: 0.5),
-                                    Color(red: 1.0, green: 0.2, blue: 0.4)
+                                    Color(red: 1.0, green: 0.2, blue: 0.4),
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
@@ -142,12 +144,15 @@ struct MessageBubble: View {
         HStack(alignment: .bottom, spacing: AppTheme.Spacing.s) {
             if isMe {
                 Spacer()
-                
+
                 // Quick reaction button for sent messages (left side)
                 quickReactionButton
                     .opacity(showQuickReaction ? 1 : 0)
                     .scaleEffect(showQuickReaction ? 1 : 0.5)
-                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: showQuickReaction)
+                    .animation(
+                        .spring(response: 0.3, dampingFraction: 0.7),
+                        value: showQuickReaction
+                    )
             }
 
             // Message bubble with time below
@@ -164,7 +169,10 @@ struct MessageBubble: View {
                         fileMessageView
                     }
                 }
-                .frame(maxWidth: AppTheme.Layout.messageBubbleMaxWidth, alignment: isMe ? .trailing : .leading)
+                .frame(
+                    maxWidth: AppTheme.Layout.messageBubbleMaxWidth,
+                    alignment: isMe ? .trailing : .leading
+                )
                 .offset(x: swipeOffset)
                 .gesture(swipeGesture)
                 .contextMenu {
@@ -173,19 +181,55 @@ struct MessageBubble: View {
                     }) {
                         Label("Reply", systemImage: "arrowshape.turn.up.left")
                     }
-                    
+
                     Button(action: {
                         showReactionPicker = true
                     }) {
                         Label("React", systemImage: "face.smiling")
                     }
                 }
-                
-                // Reactions
-                if let reactions = message.reactions, !reactions.isEmpty {
-                    ReactionsView(reactions: reactions, currentUserId: authVM.userId)
+                HStack {
+                    Button(action: {
+                        showReactionPicker = true
+                    }) {
+                        ZStack(alignment: .center) {
+                            // Main background circle
+                            Circle()
+                                .fill(Color.gray.opacity(0.2))
+                                .frame(width: 24, height: 24)
+
+                            // Smile icon
+                            Image(systemName: "face.smiling")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 16, height: 16)
+                                .foregroundColor(.gray)
+
+                            // Plus overlay
+                            Circle()
+                                .fill(Color(white: 0.4))
+                                .frame(width: 10, height: 10)
+                                .overlay(
+                                    Image(systemName: "plus")
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: 6, height: 6)
+                                        .foregroundColor(.white)
+                                )
+                                .offset(x: 4, y: -4)
+                        }
+                    }
+                    .buttonStyle(PlainButtonStyle())
+
+                    // Reactions
+                    if let reactions = message.reactions, !reactions.isEmpty {
+                        ReactionsView(
+                            reactions: reactions,
+                            currentUserId: authVM.userId
+                        )
+                    }
                 }
-                
+
                 // Time below the bubble
                 Text(formattedTime)
                     .font(AppTheme.Typography.caption2)
@@ -200,8 +244,11 @@ struct MessageBubble: View {
                 quickReactionButton
                     .opacity(showQuickReaction ? 1 : 0)
                     .scaleEffect(showQuickReaction ? 1 : 0.5)
-                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: showQuickReaction)
-                
+                    .animation(
+                        .spring(response: 0.3, dampingFraction: 0.7),
+                        value: showQuickReaction
+                    )
+
                 Spacer()
             }
         }
@@ -209,7 +256,8 @@ struct MessageBubble: View {
         .opacity(appeared ? 1 : 0)
         .offset(x: appeared ? 0 : (isMe ? 50 : -50))
         .onAppear {
-            withAnimation(.easeOut(duration: AppTheme.AnimationDuration.normal)) {
+            withAnimation(.easeOut(duration: AppTheme.AnimationDuration.normal))
+            {
                 appeared = true
             }
         }
@@ -226,17 +274,21 @@ struct MessageBubble: View {
             .presentationDragIndicator(.visible)
         }
     }
-    
+
     // MARK: - Text Message
-    
+
     private var textMessageView: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Show replied message if exists and has valid content
             if hasValidReply, let repliedMsg = message.replyTo {
-                RepliedMessageView(repliedMessage: repliedMsg, isMe: isMe, currentUserId: authVM.userId)
-                    .padding(.bottom, 8)
+                RepliedMessageView(
+                    repliedMessage: repliedMsg,
+                    isMe: isMe,
+                    currentUserId: authVM.userId
+                )
+                .padding(.bottom, 8)
             }
-            
+
             Text(message.content ?? "")
                 .foregroundColor(AppTheme.TextColors.primary)
                 .font(AppTheme.Typography.body)
@@ -245,14 +297,16 @@ struct MessageBubble: View {
         .background(messageBubbleBackground)
         .cornerRadius(AppTheme.CornerRadius.l)
         .shadow(
-            color: isMe ? AppTheme.AccentColors.primary.opacity(0.3) : Color.black.opacity(0.2),
+            color: isMe
+                ? AppTheme.AccentColors.primary.opacity(0.3)
+                : Color.black.opacity(0.2),
             radius: isMe ? 8 : 4,
             y: 2
         )
     }
-    
+
     // MARK: - Image Message
-    
+
     private var imageMessageView: some View {
         Button(action: {
             showImageViewer = true
@@ -260,10 +314,14 @@ struct MessageBubble: View {
             VStack(alignment: .leading, spacing: 0) {
                 // Show replied message if exists and has valid content
                 if hasValidReply, let repliedMsg = message.replyTo {
-                    RepliedMessageView(repliedMessage: repliedMsg, isMe: isMe, currentUserId: authVM.userId)
-                        .padding(8)
+                    RepliedMessageView(
+                        repliedMessage: repliedMsg,
+                        isMe: isMe,
+                        currentUserId: authVM.userId
+                    )
+                    .padding(8)
                 }
-                
+
                 if let url = fileURL {
                     AsyncImage(url: url) { phase in
                         switch phase {
@@ -274,7 +332,10 @@ struct MessageBubble: View {
                                 .frame(width: 240, height: 240)
                                 .clipped()
                         case .failure:
-                            imagePlaceholder(icon: "photo", text: "Failed to load")
+                            imagePlaceholder(
+                                icon: "photo",
+                                text: "Failed to load"
+                            )
                         case .empty:
                             imagePlaceholder(icon: "photo", text: "Loading...")
                         @unknown default:
@@ -288,14 +349,16 @@ struct MessageBubble: View {
             .background(messageBubbleBackground)
             .cornerRadius(AppTheme.CornerRadius.l)
             .shadow(
-                color: isMe ? AppTheme.AccentColors.primary.opacity(0.3) : Color.black.opacity(0.2),
+                color: isMe
+                    ? AppTheme.AccentColors.primary.opacity(0.3)
+                    : Color.black.opacity(0.2),
                 radius: isMe ? 8 : 4,
                 y: 2
             )
         }
         .buttonStyle(PlainButtonStyle())
     }
-    
+
     private func imagePlaceholder(icon: String, text: String) -> some View {
         VStack(spacing: 12) {
             Image(systemName: icon)
@@ -307,17 +370,21 @@ struct MessageBubble: View {
         }
         .frame(width: 240, height: 240)
     }
-    
+
     // MARK: - Video Message
-    
+
     private var videoMessageView: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Show replied message if exists and has valid content
             if hasValidReply, let repliedMsg = message.replyTo {
-                RepliedMessageView(repliedMessage: repliedMsg, isMe: isMe, currentUserId: authVM.userId)
-                    .padding(8)
+                RepliedMessageView(
+                    repliedMessage: repliedMsg,
+                    isMe: isMe,
+                    currentUserId: authVM.userId
+                )
+                .padding(8)
             }
-            
+
             if let url = fileURL {
                 VideoPlayer(player: AVPlayer(url: url))
                     .frame(width: 240, height: 240)
@@ -329,22 +396,28 @@ struct MessageBubble: View {
         .background(messageBubbleBackground)
         .cornerRadius(AppTheme.CornerRadius.l)
         .shadow(
-            color: isMe ? AppTheme.AccentColors.primary.opacity(0.3) : Color.black.opacity(0.2),
+            color: isMe
+                ? AppTheme.AccentColors.primary.opacity(0.3)
+                : Color.black.opacity(0.2),
             radius: isMe ? 8 : 4,
             y: 2
         )
     }
-    
+
     // MARK: - File Message
-    
+
     private var fileMessageView: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Show replied message if exists and has valid content
             if hasValidReply, let repliedMsg = message.replyTo {
-                RepliedMessageView(repliedMessage: repliedMsg, isMe: isMe, currentUserId: authVM.userId)
-                    .padding(.bottom, 8)
+                RepliedMessageView(
+                    repliedMessage: repliedMsg,
+                    isMe: isMe,
+                    currentUserId: authVM.userId
+                )
+                .padding(.bottom, 8)
             }
-            
+
             if messageType == .audio, let url = fileURL {
                 // Audio player for voice notes
                 AudioPlayerView(audioURL: url, isMe: isMe)
@@ -355,21 +428,25 @@ struct MessageBubble: View {
                         .font(.system(size: 24))
                         .foregroundColor(AppTheme.AccentColors.primary)
                         .frame(width: 48, height: 48)
-                        .background(Circle().fill(AppTheme.AccentColors.primary.opacity(0.2)))
-                    
+                        .background(
+                            Circle().fill(
+                                AppTheme.AccentColors.primary.opacity(0.2)
+                            )
+                        )
+
                     VStack(alignment: .leading, spacing: 4) {
                         Text(message.fileName ?? "File")
                             .font(AppTheme.Typography.body)
                             .foregroundColor(AppTheme.TextColors.primary)
                             .lineLimit(1)
-                        
+
                         Text("File")
                             .font(AppTheme.Typography.caption)
                             .foregroundColor(AppTheme.TextColors.tertiary)
                     }
-                    
+
                     Spacer()
-                    
+
                     if let url = fileURL {
                         Link(destination: url) {
                             Image(systemName: "arrow.down.circle.fill")
@@ -384,14 +461,16 @@ struct MessageBubble: View {
         .background(messageBubbleBackground)
         .cornerRadius(AppTheme.CornerRadius.l)
         .shadow(
-            color: isMe ? AppTheme.AccentColors.primary.opacity(0.3) : Color.black.opacity(0.2),
+            color: isMe
+                ? AppTheme.AccentColors.primary.opacity(0.3)
+                : Color.black.opacity(0.2),
             radius: isMe ? 8 : 4,
             y: 2
         )
     }
-    
+
     // MARK: - Background
-    
+
     private var messageBubbleBackground: some View {
         Group {
             if isMe {
@@ -403,11 +482,11 @@ struct MessageBubble: View {
             }
         }
     }
-    
+
     private var accessibilityDescription: String {
         let sender = isMe ? "You" : (message.sender?.name ?? "Unknown")
         let time = formattedTime
-        
+
         switch messageType {
         case .text:
             return "\(sender) said \(message.content ?? "") at \(time)"
@@ -430,12 +509,12 @@ struct ImageViewer: View {
     let imageURL: URL
     @State private var scale: CGFloat = 1.0
     @State private var lastScale: CGFloat = 1.0
-    
+
     var body: some View {
         NavigationView {
             ZStack {
                 Color.black.ignoresSafeArea()
-                
+
                 AsyncImage(url: imageURL) { phase in
                     switch phase {
                     case .success(let image):
