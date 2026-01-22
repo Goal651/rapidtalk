@@ -173,7 +173,7 @@ final class AdminWSManager: ObservableObject {
     private func receiveMessage() {
         task?.receive { [weak self] result in
             guard let self = self else { return }
-            
+            print(result)
             switch result {
             case .success(let message):
                 self.handleMessage(message)
@@ -181,7 +181,7 @@ final class AdminWSManager: ObservableObject {
                 
             case .failure(let error):
                 #if DEBUG
-                print("❌ Admin WebSocket error: \(error.localizedDescription)")
+                print("❌ Admin WebSocket error: \(error.localizedDescription) and \(error)")
                 #endif
                 
                 DispatchQueue.main.async {

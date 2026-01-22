@@ -25,7 +25,7 @@ struct AdminUser: Codable, Identifiable, Equatable {
     let email: String?
     let avatar: String?
     let userRole: UserRole?
-    let status: String  // "active" | "suspended"
+    let status: String 
     let online: Bool
     let lastActive: Date?
     let createdAt: Date?

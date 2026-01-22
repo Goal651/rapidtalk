@@ -25,17 +25,13 @@ struct AdminDashboard: View {
                     // Key metrics in compact grid
                     if let stats = adminVM.dashboardStats {
                         metricsGrid(stats: stats)
-                        
-                        // Activity chart
-                        activitySection(stats: stats)
                     } else if adminVM.isLoading {
                         ProgressView()
                             .tint(AppTheme.AccentColors.primary)
                             .padding(.top, 40)
                     }
                     
-                    // Quick actions grid
-                    quickActionsGrid
+                  
                 }
                 .padding(20)
             }
@@ -116,12 +112,16 @@ struct AdminDashboard: View {
             GridItem(.flexible(), spacing: 12),
             GridItem(.flexible(), spacing: 12)
         ], spacing: 12) {
-            CompactMetricCard(
-                icon: "person.3.fill",
-                title: "Total Users",
-                value: "\(stats.totalUsers)",
-                color: AppTheme.AccentColors.primary
-            )
+            NavigationLink{
+                AdminUserList()
+            }label: {
+                CompactMetricCard(
+                    icon: "person.3.fill",
+                    title: "Total Users",
+                    value: "\(stats.totalUsers)",
+                    color: AppTheme.AccentColors.primary
+                )
+            }
             
             CompactMetricCard(
                 icon: "circle.fill",
@@ -146,87 +146,7 @@ struct AdminDashboard: View {
         }
     }
     
-    // MARK: - Activity Section
-    
-    private func activitySection(stats: AdminDashboardStats) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Activity")
-                .font(.system(size: 18, weight: .bold, design: .rounded))
-                .foregroundColor(AppTheme.TextColors.primary)
-            
-            VStack(spacing: 16) {
-                ActivityRow(
-                    icon: "person.badge.plus.fill",
-                    title: "New users today",
-                    value: "\(stats.newUsersToday)",
-                    color: AppTheme.AccentColors.primary
-                )
-                
-                ActivityRow(
-                    icon: "paperplane.fill",
-                    title: "Messages today",
-                    value: formatNumber(stats.messagesLast24h),
-                    color: Color.cyan
-                )
-                
-                ActivityRow(
-                    icon: "chart.line.uptrend.xyaxis",
-                    title: "Active users",
-                    value: "\(stats.activeUsers) / \(stats.totalUsers)",
-                    color: AppTheme.AccentColors.success
-                )
-            }
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(AppTheme.SurfaceColors.base)
-            )
-        }
-    }
-    
-    // MARK: - Quick Actions
-    
-    private var quickActionsGrid: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Quick Actions")
-                .font(.system(size: 18, weight: .bold, design: .rounded))
-                .foregroundColor(AppTheme.TextColors.primary)
-            
-            LazyVGrid(columns: [
-                GridItem(.flexible(), spacing: 12),
-                GridItem(.flexible(), spacing: 12)
-            ], spacing: 12) {
-                NavigationLink {
-                    AdminUserList()
-                } label: {
-                    QuickActionButton(
-                        icon: "person.2.fill",
-                        title: "Users",
-                        color: AppTheme.AccentColors.primary
-                    )
-                }
-                
-                QuickActionButton(
-                    icon: "chart.bar.fill",
-                    title: "Analytics",
-                    color: Color.purple
-                )
-                
-                QuickActionButton(
-                    icon: "bell.fill",
-                    title: "Notifications",
-                    color: Color.orange
-                )
-                
-                QuickActionButton(
-                    icon: "gearshape.fill",
-                    title: "Settings",
-                    color: AppTheme.TextColors.secondary
-                )
-            }
-        }
-    }
-    
+       
     // MARK: - Helper
     
     private func formatNumber(_ number: Int) -> String {
