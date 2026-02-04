@@ -11,17 +11,17 @@ struct AdminDashboard: View {
     @StateObject private var adminVM = AdminViewModel()
     @StateObject private var adminWS = AdminWSManager()
     @State private var appeared = false
-    
+
     var body: some View {
         ZStack {
             AppTheme.BackgroundColors.primary
                 .ignoresSafeArea()
-            
+
             ScrollView {
                 VStack(spacing: 20) {
                     // Header with real-time status
                     headerSection
-                    
+
                     // Key metrics in compact grid
                     if let stats = adminVM.dashboardStats {
                         metricsGrid(stats: stats)
@@ -30,8 +30,7 @@ struct AdminDashboard: View {
                             .tint(AppTheme.AccentColors.primary)
                             .padding(.top, 40)
                     }
-                    
-                  
+
                 }
                 .padding(20)
             }
@@ -41,6 +40,7 @@ struct AdminDashboard: View {
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await adminVM.loadDashboardStats()
+            await adminVM.loadUsers()
             adminWS.connect()
         }
         .onAppear {
@@ -55,7 +55,10 @@ struct AdminDashboard: View {
             if let update = update { adminVM.handleUserStatusUpdate(update) }
         }
         .onChange(of: adminWS.messageUpdate) { _, update in
-            if let update = update { adminVM.handleMessageUpdate(update) }
+            if let update = update {
+                print("First it was workinig \(update)")
+                adminVM.handleMessageUpdate(update)
+            }
         }
         .onChange(of: adminWS.newUser) { _, user in
             if let user = user { adminVM.handleNewUser(user) }
@@ -64,30 +67,42 @@ struct AdminDashboard: View {
             await adminVM.loadDashboardStats()
         }
     }
-    
+
     // MARK: - Header
-    
+
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Admin Dashboard")
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .font(
+                            .system(size: 28, weight: .bold, design: .rounded)
+                        )
                         .foregroundColor(AppTheme.TextColors.primary)
-                    
+
                     HStack(spacing: 6) {
                         Circle()
-                            .fill(adminWS.isConnected ? AppTheme.AccentColors.success : AppTheme.TextColors.tertiary)
+                            .fill(
+                                adminWS.isConnected
+                                    ? AppTheme.AccentColors.success
+                                    : AppTheme.TextColors.tertiary
+                            )
                             .frame(width: 6, height: 6)
-                        
+
                         Text(adminWS.isConnected ? "Live" : "Connecting...")
-                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .font(
+                                .system(
+                                    size: 13,
+                                    weight: .medium,
+                                    design: .rounded
+                                )
+                            )
                             .foregroundColor(AppTheme.TextColors.secondary)
                     }
                 }
-                
+
                 Spacer()
-                
+
                 // Refresh button
                 Button(action: {
                     Task { await adminVM.loadDashboardStats() }
@@ -104,17 +119,20 @@ struct AdminDashboard: View {
             }
         }
     }
-    
+
     // MARK: - Metrics Grid
-    
+
     private func metricsGrid(stats: AdminDashboardStats) -> some View {
-        LazyVGrid(columns: [
-            GridItem(.flexible(), spacing: 12),
-            GridItem(.flexible(), spacing: 12)
-        ], spacing: 12) {
-            NavigationLink{
+        LazyVGrid(
+            columns: [
+                GridItem(.flexible(), spacing: 12),
+                GridItem(.flexible(), spacing: 12),
+            ],
+            spacing: 12
+        ) {
+            NavigationLink {
                 AdminUserList()
-            }label: {
+            } label: {
                 CompactMetricCard(
                     icon: "person.3.fill",
                     title: "Total Users",
@@ -122,21 +140,21 @@ struct AdminDashboard: View {
                     color: AppTheme.AccentColors.primary
                 )
             }
-            
+
             CompactMetricCard(
                 icon: "circle.fill",
                 title: "Online",
                 value: "\(stats.activeUsers)",
                 color: AppTheme.AccentColors.success
             )
-            
+
             CompactMetricCard(
                 icon: "bubble.left.fill",
                 title: "Messages",
                 value: formatNumber(stats.totalMessages),
                 color: Color.cyan
             )
-            
+
             CompactMetricCard(
                 icon: "clock.fill",
                 title: "Last 24h",
@@ -145,12 +163,11 @@ struct AdminDashboard: View {
             )
         }
     }
-    
-       
+
     // MARK: - Helper
-    
+
     private func formatNumber(_ number: Int) -> String {
-        if number >= 1000000 {
+        if number >= 1_000_000 {
             return String(format: "%.1fM", Double(number) / 1000000.0)
         } else if number >= 1000 {
             return String(format: "%.1fK", Double(number) / 1000.0)
@@ -167,9 +184,9 @@ struct CompactMetricCard: View {
     let title: String
     let value: String
     let color: Color
-    
+
     var body: some View {
-        VStack(spacing: 8) { // spacing between icon and text
+        VStack(spacing: 8) {  // spacing between icon and text
             Image(systemName: icon)
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundColor(color)
@@ -178,25 +195,25 @@ struct CompactMetricCard: View {
                     Circle()
                         .fill(color.opacity(0.15))
                 )
-            
-            VStack(spacing: 2) { // inner texts stacked
+
+            VStack(spacing: 2) {  // inner texts stacked
                 Text(value)
                     .font(.system(size: 24, weight: .bold, design: .rounded))
                     .foregroundColor(AppTheme.TextColors.primary)
-                
+
                 Text(title)
                     .font(.system(size: 12, weight: .medium, design: .rounded))
                     .foregroundColor(AppTheme.TextColors.secondary)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity) // take all space
+        .frame(maxWidth: .infinity, maxHeight: .infinity)  // take all space
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(AppTheme.SurfaceColors.base)
         )
-        .multilineTextAlignment(.center) // center text
-        .contentShape(Rectangle()) // optional, for tappable area
+        .multilineTextAlignment(.center)  // center text
+        .contentShape(Rectangle())  // optional, for tappable area
     }
 }
 
@@ -207,7 +224,7 @@ struct ActivityRow: View {
     let title: String
     let value: String
     let color: Color
-    
+
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
@@ -218,13 +235,13 @@ struct ActivityRow: View {
                     Circle()
                         .fill(color.opacity(0.15))
                 )
-            
+
             Text(title)
                 .font(.system(size: 14, weight: .medium, design: .rounded))
                 .foregroundColor(AppTheme.TextColors.secondary)
-            
+
             Spacer()
-            
+
             Text(value)
                 .font(.system(size: 15, weight: .bold, design: .rounded))
                 .foregroundColor(AppTheme.TextColors.primary)
@@ -238,7 +255,7 @@ struct QuickActionButton: View {
     let icon: String
     let title: String
     let color: Color
-    
+
     var body: some View {
         VStack(spacing: 12) {
             Image(systemName: icon)
@@ -249,7 +266,7 @@ struct QuickActionButton: View {
                     Circle()
                         .fill(color.opacity(0.15))
                 )
-            
+
             Text(title)
                 .font(.system(size: 14, weight: .semibold, design: .rounded))
                 .foregroundColor(AppTheme.TextColors.primary)

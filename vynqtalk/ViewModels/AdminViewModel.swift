@@ -30,8 +30,7 @@ class AdminViewModel: ObservableObject {
         
         do {
             let response: APIResponse<AdminDashboardStats> = try await api.get("/admin/dashboard")
-            
-            guard response.success, let stats = response.data else {
+             guard response.success, let stats = response.data else {
                 errorMessage = response.message
                 isLoading = false
                 return
@@ -39,11 +38,6 @@ class AdminViewModel: ObservableObject {
             
             dashboardStats = stats
             isLoading = false
-            
-            #if DEBUG
-            print("✅ Loaded dashboard stats: \(stats.totalUsers) users, \(stats.totalMessages) messages")
-            #endif
-            
         } catch {
             errorMessage = "Failed to load dashboard stats"
             isLoading = false
@@ -200,7 +194,11 @@ class AdminViewModel: ObservableObject {
     
     @MainActor
     func handleMessageUpdate(_ update: AdminMessageUpdate) {
+        print("We are reaching here \(update)")
+        print("Looking for userId:", update.userId, "in", users)
+
         if let index = users.firstIndex(where: { $0.id == update.userId }) {
+            print("This is the one who sent it\(users[index])")
             users[index] = AdminUser(
                 id: users[index].id,
                 name: users[index].name,

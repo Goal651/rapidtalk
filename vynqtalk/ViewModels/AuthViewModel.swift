@@ -36,7 +36,7 @@ class AuthViewModel:ObservableObject{
     }
     
     @MainActor
-    func login(email: String, password: String) async -> Bool {
+    func login(email: String, password: String) async -> (String,Bool){
         do {
             let payload = LoginRequest(email: email, password: password)
 
@@ -45,7 +45,7 @@ class AuthViewModel:ObservableObject{
 
             guard response.success,
                   let loginData = response.data else {
-                return false
+                return (response.message,false)
             }
 
             // ✅ accessToken is NOT optional
@@ -67,11 +67,11 @@ class AuthViewModel:ObservableObject{
             loggedIn = true  
 
             nav.reset(to: .main)
-            return true
+            return (response.message,true)
 
         } catch {
             print("Login error:", error)
-            return false
+            return ("Login Failed. ",false)
         }
     }
 

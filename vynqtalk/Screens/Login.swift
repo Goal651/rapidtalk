@@ -102,14 +102,14 @@ struct LoginScreen: View {
                     ) {
                         Task {
                             isLoading = true
-                            let ok = await authVM.login(email: email, password: password)
+                            let response = await authVM.login(email: email, password: password)
                             isLoading = false
                             
-                            if ok {
+                            if response.1{
                                 wsM.connect()
                             } else {
                                 modalTitle = "Login Failed"
-                                modalDescription = "Please check your email/password and try again."
+                                modalDescription = response.0
                                 withAnimation { showModal = true }
                             }
                         }
@@ -140,7 +140,7 @@ struct LoginScreen: View {
         .navigationBarBackButtonHidden()
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                ModernBackButton()
+                CustomBackButton()
             }
         }
         .onAppear {

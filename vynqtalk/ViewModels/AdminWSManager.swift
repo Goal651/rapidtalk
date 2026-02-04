@@ -173,7 +173,6 @@ final class AdminWSManager: ObservableObject {
     private func receiveMessage() {
         task?.receive { [weak self] result in
             guard let self = self else { return }
-            print(result)
             switch result {
             case .success(let message):
                 self.handleMessage(message)
@@ -187,7 +186,6 @@ final class AdminWSManager: ObservableObject {
                 DispatchQueue.main.async {
                     self.isConnected = false
                 }
-                
                 // Attempt reconnection
                 self.attemptReconnection()
             }
@@ -250,7 +248,7 @@ final class AdminWSManager: ObservableObject {
             case .messageSent(let update):
                 self?.messageUpdate = update
                 #if DEBUG
-                print("✅ Admin WebSocket: User \(update.userId) sent message (increment by \(update.messageCount))")
+                print("✅ Admin WebSocket: User \(update.userId) sent message (increment by \(update))")
                 #endif
                 
             case .newUser(let user):

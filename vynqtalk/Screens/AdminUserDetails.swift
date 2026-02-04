@@ -10,7 +10,8 @@ import SwiftUI
 struct AdminUserDetails: View {
     @Environment(\.dismiss) var dismiss
     let user: AdminUser
-    @ObservedObject var adminVM: AdminViewModel
+    @StateObject private var adminVM = AdminViewModel()
+    @StateObject private var adminWS = AdminWSManager()
     @State private var showSuspendConfirmation = false
     @State private var suspendReason = ""
     @State private var isProcessing = false
@@ -53,6 +54,12 @@ struct AdminUserDetails: View {
             }
             .navigationTitle("User Details")
             .navigationBarTitleDisplayMode(.inline)
+            .onChange(of: adminWS.messageUpdate) { _, update in
+                if let update = update {
+                    print("First it was workinig \(update)")
+                    adminVM.handleMessageUpdate(update)
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
